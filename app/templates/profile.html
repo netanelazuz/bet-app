@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block title %}Profile{% endblock %}
+{% block content %}
+<h1>Profile</h1>
+<p><strong>{{ user.nickname or user.username }}</strong> (@{{ user.username }})</p>
+{% if user.bio %}<p>{{ user.bio }}</p>{% endif %}
+<p>Wins: {{ user.wins }} | Losses: {{ user.losses }} | Open bets: {{ user.open_bets }} | Aura: {{ user.aura }}</p>
+<h2>Open bets joined</h2>
+{% for bet in open_bets_joined %}
+<div class="card">{{ bet.topic }}</div>
+{% endfor %}
+{% if not open_bets_joined %}
+<p>None.</p>
+{% endif %}
+{% endblock %}

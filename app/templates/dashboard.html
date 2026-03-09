@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+{% block content %}
+<h1>Dashboard</h1>
+{% if user %}
+<p>Hello, {{ user.nickname or user.username }}. Aura: {{ user.aura }}</p>
+{% endif %}
+<h2>Open bets</h2>
+{% if bets %}
+{% for bet in bets %}
+<div class="card">
+    <strong>{{ bet.topic }}</strong>
+    <br><small>Difficulty: {{ bet.difficulty.value if bet.difficulty else '-' }} | Status: {{ bet.status.value }}</small>
+</div>
+{% endfor %}
+{% else %}
+<p>No open bets.</p>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,7 @@
+{% extends "base.html" %}
+{% block title %}BET – Home{% endblock %}
+{% block content %}
+<h1>BET – Private Social Prediction Platform</h1>
+<p>Create and join prediction bets with friends. Compete on Aura points.</p>
+<p><a href="{{ url_for('auth.register') }}">Register</a> or <a href="{{ url_for('auth.login') }}">Login</a> to start.</p>
+{% endblock %}

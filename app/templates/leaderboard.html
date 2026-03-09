@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block title %}Leaderboard{% endblock %}
+{% block content %}
+<h1>Leaderboard (by Aura)</h1>
+<ol>
+{% for u in users %}
+<li>{{ u.nickname or u.username }} – {{ u.aura }} Aura</li>
+{% endfor %}
+</ol>
+{% if not users %}
+<p>No users yet.</p>
+{% endif %}
+{% endblock %}

@@ -1,8 +1,37 @@
-# Predictions
+# BET – Private Social Prediction Platform (Application)
 
+Flask application: JWT auth, PostgreSQL, Dashboard, Profile, Leaderboard.
 
+## Setup
 
-## Getting started
+```bash
+python -m venv .venv
+.venv\Scripts\activate   # Windows
+pip install -r requirements.txt
+cp .env.example .env     # set SECRET_KEY, JWT_SECRET_KEY, DATABASE_URL
+```
+
+## Database
+
+```bash
+set FLASK_APP=run
+flask db upgrade
+```
+
+## Run
+
+```bash
+python run.py
+# or: flask run
+```
+
+## Tests
+
+```bash
+pytest tests/ -v
+```
+
+## Getting started (GitLab)
 
 To make it easy for you to get started with GitLab, here's a list of recommended next steps.
 
