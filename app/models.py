@@ -29,6 +29,7 @@ class User(db.Model):
     open_bets = db.Column(db.Integer, default=0)
     aura = db.Column(db.Integer, default=0)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    last_login_at = db.Column(db.DateTime, nullable=True)
 
     created_bets = db.relationship("Bet", backref="creator", lazy="dynamic", foreign_keys="Bet.created_by_id")
     participations = db.relationship("Participation", backref="user", lazy="dynamic", foreign_keys="Participation.user_id")
@@ -60,6 +61,8 @@ class Bet(db.Model):
     report_count = db.Column(db.Integer, default=0)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     created_by_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+    winning_side = db.Column(db.String(20), nullable=True)  # "yes" or "no", set when bet closes
+    closed_at = db.Column(db.DateTime, nullable=True)
 
     participations = db.relationship("Participation", backref="bet", lazy="dynamic", cascade="all, delete-orphan")
 
@@ -79,13 +82,14 @@ class Bet(db.Model):
 
 
 class Participation(db.Model):
-    """User participation in a bet (stake and outcome)."""
+    """User participation in a bet (stake, side, and outcome)."""
     __tablename__ = "participations"
 
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
     bet_id = db.Column(db.Integer, db.ForeignKey("bets.id"), nullable=False)
-    stake = db.Column(db.Integer, nullable=False)  # Aura staked
+    stake = db.Column(db.Integer, nullable=False)  # Aura staked (variable)
+    side = db.Column(db.String(20), nullable=True)  # "yes" or "no" (user prediction); legacy rows may be NULL
     is_winner = db.Column(db.Boolean, nullable=True)  # None = not settled
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 

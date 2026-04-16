@@ -17,8 +17,10 @@ def test_register_json(client, init_db):
 
 
 def test_register_validation_username(client, init_db):
+    # Too-short username -> invalid
     r = client.post("/auth/register", json={"username": "a", "password": "secret12"})
     assert r.status_code == 400
+    # Too-short password -> invalid
     r = client.post("/auth/register", json={"username": "validuser", "password": "short"})
     assert r.status_code == 400
 

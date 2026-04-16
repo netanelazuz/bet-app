@@ -7,7 +7,7 @@
 <p>Wins: {{ user.wins }} | Losses: {{ user.losses }} | Open bets: {{ user.open_bets }} | Aura: {{ user.aura }}</p>
 <h2>Open bets joined</h2>
 {% for bet in open_bets_joined %}
-<div class="card">{{ bet.topic }}</div>
+<div class="card"><a href="{{ url_for('main.bet_detail', bet_id=bet.id) }}">{{ bet.topic }}</a></div>
 {% endfor %}
 {% if not open_bets_joined %}
 <p>None.</p>

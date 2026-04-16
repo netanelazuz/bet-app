@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block title %}{{ bet.topic }}{% endblock %}
+{% block content %}
+<h1>{{ bet.topic }}</h1>
+<p>{{ bet.description or '—' }}</p>
+<p><strong>Difficulty:</strong> {{ bet.difficulty.value if bet.difficulty else '-' }} |
+   <strong>Status:</strong> {{ bet.status.value }}
+   {% if bet.end_date %}| <strong>End date:</strong> {{ bet.end_date }}{% endif %}
+   {% if bet.end_condition %}| <strong>End condition:</strong> {{ bet.end_condition }}{% endif %}
+</p>
+<p>Created by {{ bet.creator.nickname or bet.creator.username }}</p>
+
+<h2>Participants</h2>
+{% if participations %}
+<ul>
+    {% for p in participations %}
+    <li>{{ p.user.nickname or p.user.username }} — stake: {{ p.stake }} Aura, side: {{ p.side or 'yes' }}
+        {% if bet.status.value == 'closed' %}({{ 'Won' if p.is_winner else 'Lost' }}){% endif %}
+    </li>
+    {% endfor %}
+</ul>
+{% else %}
+<p>No participants yet.</p>
+{% endif %}
+
+{% if bet.status.value == 'open' and bet.created_by_id == user.id %}
+<h2>Close bet</h2>
+<form method="post" action="{{ url_for('main.close_bet', bet_id=bet.id) }}">
+    <label>Winning side
+        <select name="winning_side" required>
+            <option value="yes">Yes</option>
+            <option value="no">No</option>
+        </select>
+    </label>
+    <button type="submit">Close bet & redistribute Aura</button>
+</form>
+{% endif %}
+
+{% if can_join %}
+<h2>Join this bet</h2>
+<p>Your Aura: {{ user.aura }}</p>
+<form method="post" action="{{ url_for('main.join_bet', bet_id=bet.id) }}">
+    <label>Stake (Aura) <input type="number" name="stake" min="1" max="{{ user.aura or 0 }}" value="1" required></label>
+    <label>Your prediction
+        <select name="side">
+            <option value="yes">Yes</option>
+            <option value="no">No</option>
+        </select>
+    </label>
+    <button type="submit">Join</button>
+</form>
+{% endif %}
+
+{% if participation and bet.status.value == 'open' %}
+<p>You joined with {{ participation.stake }} Aura ({{ participation.side or 'yes' }}).</p>
+{% endif %}
+
+<p><a href="{{ url_for('main.dashboard') }}">Back to dashboard</a></p>
+{% endblock %}

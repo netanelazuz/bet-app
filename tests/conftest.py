@@ -1,9 +1,10 @@
-"""Pytest fixtures for BET app. Set env before any app import so Config uses SQLite."""
+"""Pytest fixtures for BET app. Set env before any app import so Config uses in-memory SQLite."""
 import os
 
+os.environ["TESTING"] = "1"
 os.environ["SECRET_KEY"] = "test-secret"
 os.environ["JWT_SECRET_KEY"] = "test-jwt-secret"
-os.environ["DATABASE_URL"] = "sqlite:///:memory:"
+os.environ["DATABASE_URL"] = "sqlite:///test.db"
 
 import pytest
 from app import create_app, db
@@ -13,7 +14,7 @@ from app import create_app, db
 def app():
     application = create_app()
     application.config["TESTING"] = True
-    application.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///:memory:"
+    application.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///test.db"
     return application
 
 

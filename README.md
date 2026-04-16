@@ -2,6 +2,9 @@
 
 Flask application: JWT auth, PostgreSQL, Dashboard, Profile, Leaderboard.
 
+**Phase 2 (Aura):** Create bet, join with variable stake (yes/no), creator cannot join own bet; close bet (creator sets winning side); Aura redistribution (losing pool × difficulty multiplier); win/loss notification on dashboard; logout.
+**Phase 3 (Containerization):** Production-ready Docker image (Gunicorn, non-root user) with automatic migration on container startup.
+
 ## Setup
 
 ```bash
@@ -30,6 +33,24 @@ python run.py
 ```bash
 pytest tests/ -v
 ```
+
+## Build Docker Image (Phase 3)
+
+```bash
+docker build -t bet-app:phase3 .
+```
+
+## Run Docker Image
+
+```bash
+docker run --rm -p 5000:5000 \
+  -e SECRET_KEY=change-me \
+  -e JWT_SECRET_KEY=change-me \
+  -e DATABASE_URL=postgresql://user:password@host:5432/bet_db \
+  bet-app:phase3
+```
+
+> Note: Kubernetes + Helm deployment will replace local compose workflow in the next phase.
 
 ## Getting started (GitLab)
 

@@ -4,12 +4,23 @@
 <h1>Dashboard</h1>
 {% if user %}
 <p>Hello, {{ user.nickname or user.username }}. Aura: {{ user.aura }}</p>
+<p><a href="{{ url_for('main.create_bet') }}">Create a bet</a></p>
 {% endif %}
+
+{% if recent_results %}
+<h2>Since your last visit</h2>
+<ul>
+    {% for p in recent_results %}
+    <li><strong>{{ p.bet.topic }}</strong> — You {{ 'won' if p.is_winner else 'lost' }} (stake: {{ p.stake }} Aura)</li>
+    {% endfor %}
+</ul>
+{% endif %}
+
 <h2>Open bets</h2>
 {% if bets %}
 {% for bet in bets %}
 <div class="card">
-    <strong>{{ bet.topic }}</strong>
+    <a href="{{ url_for('main.bet_detail', bet_id=bet.id) }}"><strong>{{ bet.topic }}</strong></a>
     <br><small>Difficulty: {{ bet.difficulty.value if bet.difficulty else '-' }} | Status: {{ bet.status.value }}</small>
 </div>
 {% endfor %}

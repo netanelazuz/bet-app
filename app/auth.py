@@ -69,7 +69,8 @@ def create_access_token(identity):
     import time
     now = int(time.time())
     payload = {
-        "sub": identity,
+        # PyJWT expects sub to be a string by spec; cast explicitly.
+        "sub": str(identity),
         "exp": now + _get_jwt_expires(),
         "iat": now,
     }
@@ -169,8 +170,17 @@ def login():
     if not user or not bcrypt.checkpw(password.encode("utf-8"), user.password_hash.encode("utf-8")):
         return jsonify({"error": "Invalid credentials"}), 401
     token = create_access_token(user.id)
-    if request.content_type and "application/json" not in request.content_type:
+    wants_json = request.content_type and "application/json" in (request.content_type or "")
+    if wants_json:
+        resp = make_response(jsonify({"access_token": token, "user": user.to_dict()}))
+    else:
         resp = make_response(redirect("/dashboard"))
-        resp.set_cookie(AUTH_COOKIE, token, max_age=AUTH_COOKIE_MAX_AGE, httponly=True, samesite="Lax")
-        return resp
-    return jsonify({"access_token": token, "user": user.to_dict()})
+    resp.set_cookie(AUTH_COOKIE, token, max_age=AUTH_COOKIE_MAX_AGE, httponly=True, samesite="Lax")
+    return resp
+
+
+@auth_bp.route("/logout", methods=["GET", "POST"])
+def logout():
+    resp = redirect(request.args.get("next") or "/")
+    resp.delete_cookie(AUTH_COOKIE)
+    return resp

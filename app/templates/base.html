@@ -21,7 +21,7 @@
         <a href="{{ url_for('main.dashboard') }}">Dashboard</a>
         <a href="{{ url_for('main.profile') }}">Profile</a>
         <a href="{{ url_for('main.leaderboard') }}">Leaderboard</a>
-        <a href="{{ url_for('auth.login') }}">Logout (re-login)</a>
+        <a href="{{ url_for('auth.logout') }}">Logout</a>
         {% else %}
         <a href="{{ url_for('auth.login') }}">Login</a>
         <a href="{{ url_for('auth.register') }}">Register</a>

@@ -2,6 +2,7 @@
 from __future__ import with_statement
 
 import logging
+import os
 from logging.config import fileConfig
 
 from sqlalchemy import engine_from_config
@@ -12,9 +13,14 @@ from flask import current_app
 # Alembic Config object
 config = context.config
 
-# Interpret the config file for Python logging
-if config.config_file_name is not None:
-    fileConfig(config.config_file_name)
+# Interpret the config file for Python logging (optional; ini is often in project root)
+config_file = config.config_file_name
+if config_file and not os.path.isfile(config_file):
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    root_ini = os.path.join(os.path.dirname(script_dir), "alembic.ini")
+    config_file = root_ini if os.path.isfile(root_ini) else None
+if config_file and os.path.isfile(config_file):
+    fileConfig(config_file)
 logger = logging.getLogger("alembic.env")
 
 def get_app():

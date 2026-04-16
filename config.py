@@ -2,6 +2,15 @@
 import os
 from pathlib import Path
 
+# Load .env so DATABASE_URL etc. are set (skip in tests so conftest's env is used)
+try:
+    from dotenv import load_dotenv
+    if not os.environ.get("TESTING"):
+        _env_file = Path(__file__).resolve().parent.parent / ".env"
+        load_dotenv(_env_file)
+except ImportError:
+    pass
+
 BASE_DIR = Path(__file__).resolve().parent
 
 

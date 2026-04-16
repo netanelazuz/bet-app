@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}Create bet{% endblock %}
+{% block content %}
+<h1>Create a bet</h1>
+<form method="post" action="{{ url_for('main.create_bet') }}">
+    <p>
+        <label>Topic <input type="text" name="topic" maxlength="200" required placeholder="e.g. Will it rain tomorrow?"></label>
+    </p>
+    <p>
+        <label>Description <textarea name="description" rows="3" placeholder="Optional"></textarea></label>
+    </p>
+    <p>
+        <label>Difficulty
+            <select name="difficulty">
+                {% for d in difficulties %}
+                <option value="{{ d.value }}" {% if d.value == 'medium' %}selected{% endif %}>{{ d.value|capitalize }}</option>
+                {% endfor %}
+            </select>
+        </label>
+    </p>
+    <p>
+        <label>End date (optional) <input type="datetime-local" name="end_date"></label>
+    </p>
+    <p>
+        <label>End condition (optional) <input type="text" name="end_condition" maxlength="200" placeholder="e.g. When the game ends"></label>
+    </p>
+    <p>
+        <button type="submit">Create bet</button>
+        <a href="{{ url_for('main.dashboard') }}">Cancel</a>
+    </p>
+</form>
+{% endblock %}
