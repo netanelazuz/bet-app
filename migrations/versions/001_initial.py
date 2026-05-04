@@ -18,11 +18,6 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    difficulty_enum = sa.Enum("easy", "medium", "hard", name="difficulty", create_type=True)
-    betstatus_enum = sa.Enum("open", "closed", "canceled", name="betstatus", create_type=True)
-    difficulty_enum.create(op.get_bind(), checkfirst=True)
-    betstatus_enum.create(op.get_bind(), checkfirst=True)
-
     op.create_table(
         "users",
         sa.Column("id", sa.Integer(), nullable=False),

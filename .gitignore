@@ -22,11 +22,19 @@ app.db
 .coverage
 htmlcov/
 
-# IDE/editor
+# Flask instance folder (local SQLite / instance-specific config)
+instance/
+
+# IDE / editor
 .vscode/
 .idea/
 *.swp
+*.swo
 
 # OS files
 .DS_Store
 Thumbs.db
+desktop.ini
+
+# Working / planning documents not part of the codebase
+cursor_project_roadmap_planning.md

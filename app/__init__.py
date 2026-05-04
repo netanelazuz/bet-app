@@ -23,6 +23,17 @@ def create_app(config_class=Config) -> Flask:
     app.register_blueprint(auth_bp, url_prefix="/auth")
     app.register_blueprint(main_bp)
 
+    @app.context_processor
+    def inject_current_user():
+        from app.auth import get_current_user_id
+        from app.models import User
+        try:
+            user_id = get_current_user_id()
+            current_user = User.query.get(int(user_id)) if user_id else None
+        except Exception:
+            current_user = None
+        return {"current_user": current_user}
+
     @app.route("/health")
     def health():
         return {"status": "ok"}, 200

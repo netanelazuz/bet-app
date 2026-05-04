@@ -144,7 +144,7 @@ def register():
         password_hash=password_hash,
         nickname=nickname,
         bio=bio,
-        aura=0,
+        aura=1000,
     )
     db.session.add(user)
     db.session.commit()

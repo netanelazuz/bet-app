@@ -17,7 +17,8 @@ RUN pip install --upgrade pip \
 
 COPY . /app
 
-RUN chmod +x /app/docker/entrypoint.sh \
+RUN sed -i 's/\r$//' /app/docker/entrypoint.sh \
+    && chmod +x /app/docker/entrypoint.sh \
     && adduser --disabled-password --gecos "" appuser \
     && chown -R appuser:appuser /app
 

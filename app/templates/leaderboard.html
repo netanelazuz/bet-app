@@ -1,13 +1,177 @@
 {% extends "base.html" %}
-{% block title %}Leaderboard{% endblock %}
+{% block title %}Aura Leaderboard – BET{% endblock %}
 {% block content %}
-<h1>Leaderboard (by Aura)</h1>
-<ol>
-{% for u in users %}
-<li>{{ u.nickname or u.username }} – {{ u.aura }} Aura</li>
-{% endfor %}
-</ol>
-{% if not users %}
-<p>No users yet.</p>
-{% endif %}
+<div class="max-w-4xl mx-auto px-8 py-8 flex flex-col gap-8">
+
+    {# ── Title ─────────────────────────────────────────────── #}
+    <div>
+        <h1 class="text-4xl font-black tracking-tight">Aura Leaderboard</h1>
+        <p class="text-text-muted text-sm mt-1">The Alpha Group Rankings</p>
+    </div>
+
+    {# ── Time period tabs ──────────────────────────────────── #}
+    <div class="flex items-center gap-0 border-b border-border-dark -mb-2">
+        <button id="tab-all" onclick="setTab('all')"
+                class="leaderboard-tab px-5 py-2.5 text-sm font-bold text-primary border-b-2 border-primary -mb-px transition-colors">
+            All Time
+        </button>
+        <button id="tab-month" onclick="setTab('month')"
+                class="leaderboard-tab px-5 py-2.5 text-sm font-medium text-text-muted hover:text-slate-100 border-b-2 border-transparent -mb-px transition-colors">
+            This Month
+        </button>
+        <button id="tab-week" onclick="setTab('week')"
+                class="leaderboard-tab px-5 py-2.5 text-sm font-medium text-text-muted hover:text-slate-100 border-b-2 border-transparent -mb-px transition-colors">
+            This Week
+        </button>
+    </div>
+
+    {# ── Top-3 podium ──────────────────────────────────────── #}
+    {% if users_with_stats | length > 0 %}
+    <div class="flex items-end justify-center gap-4">
+
+        {# #2 (left) #}
+        {% if users_with_stats | length >= 2 %}
+        {% set second = users_with_stats[1] %}
+        <div class="flex flex-col items-center gap-3 pb-4">
+            <div class="relative flex items-center justify-center w-16 h-16 rounded-2xl bg-slate-700 text-white text-2xl font-black border-2 border-slate-500">
+                {{ (second.user.nickname or second.user.username or 'U')[0] | upper }}
+                <span class="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-slate-500 text-xs font-black flex items-center justify-center text-white border-2 border-background-dark">#2</span>
+            </div>
+            <div class="text-center">
+                <p class="text-sm font-bold text-slate-100">{{ second.user.nickname or second.user.username }}</p>
+                <p class="text-xs text-primary font-bold flex items-center gap-0.5 justify-center">
+                    <span class="material-symbols-outlined text-xs ms-fill">diamond</span>
+                    {{ (second.user.aura or 0) | int }}
+                </p>
+            </div>
+            <div class="w-28 h-24 rounded-t-xl bg-gradient-to-t from-slate-700 to-slate-600 border border-slate-500 flex items-center justify-center">
+                <span class="text-3xl font-black text-slate-400">#2</span>
+            </div>
+        </div>
+        {% endif %}
+
+        {# #1 (center – tallest) #}
+        {% set first = users_with_stats[0] %}
+        <div class="flex flex-col items-center gap-3">
+            <span class="material-symbols-outlined text-yellow-400 text-3xl ms-fill">military_tech</span>
+            <div class="relative flex items-center justify-center w-20 h-20 rounded-2xl bg-primary text-white text-3xl font-black border-2 border-yellow-400 shadow-lg shadow-primary/40">
+                {{ (first.user.nickname or first.user.username or 'U')[0] | upper }}
+            </div>
+            <div class="text-center">
+                <p class="font-bold text-slate-100">{{ first.user.nickname or first.user.username }}</p>
+                <p class="text-sm text-primary font-bold flex items-center gap-0.5 justify-center">
+                    <span class="material-symbols-outlined text-sm ms-fill">diamond</span>
+                    {{ (first.user.aura or 0) | int }} Aura
+                </p>
+            </div>
+            <div class="w-32 h-36 rounded-t-xl bg-gradient-to-t from-primary/40 to-primary/20 border border-primary/50 flex items-center justify-center shadow-lg shadow-primary/20">
+                <span class="text-4xl font-black text-primary/60">#1</span>
+            </div>
+        </div>
+
+        {# #3 (right) #}
+        {% if users_with_stats | length >= 3 %}
+        {% set third = users_with_stats[2] %}
+        <div class="flex flex-col items-center gap-3 pb-4">
+            <div class="relative flex items-center justify-center w-16 h-16 rounded-2xl bg-amber-900 text-white text-2xl font-black border-2 border-amber-700">
+                {{ (third.user.nickname or third.user.username or 'U')[0] | upper }}
+                <span class="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-amber-700 text-xs font-black flex items-center justify-center text-white border-2 border-background-dark">#3</span>
+            </div>
+            <div class="text-center">
+                <p class="text-sm font-bold text-slate-100">{{ third.user.nickname or third.user.username }}</p>
+                <p class="text-xs text-primary font-bold flex items-center gap-0.5 justify-center">
+                    <span class="material-symbols-outlined text-xs ms-fill">diamond</span>
+                    {{ (third.user.aura or 0) | int }}
+                </p>
+            </div>
+            <div class="w-28 h-16 rounded-t-xl bg-gradient-to-t from-amber-900 to-amber-800 border border-amber-700 flex items-center justify-center">
+                <span class="text-3xl font-black text-amber-600">#3</span>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    {# ── Rankings table ────────────────────────────────────── #}
+    <div class="bg-surface-darker rounded-2xl border border-border-dark overflow-hidden">
+        <div class="grid grid-cols-[3rem_1fr_auto_auto] gap-0">
+            {# Header #}
+            <div class="col-span-4 grid grid-cols-[3rem_1fr_auto_auto] bg-surface-dark border-b border-border-dark">
+                <div class="px-4 py-3 text-xs font-bold text-text-muted uppercase tracking-wider">Rank</div>
+                <div class="px-4 py-3 text-xs font-bold text-text-muted uppercase tracking-wider">Player</div>
+                <div class="px-4 py-3 text-xs font-bold text-text-muted uppercase tracking-wider text-right">Aura</div>
+                <div class="px-4 py-3 text-xs font-bold text-text-muted uppercase tracking-wider text-right pr-6">Win Rate</div>
+            </div>
+
+            {# Rows #}
+            {% for entry in users_with_stats %}
+            {% set is_current = current_user and entry.user.id == current_user.id %}
+            <div class="col-span-4 grid grid-cols-[3rem_1fr_auto_auto] border-b border-border-dark/50 last:border-0
+                        {% if is_current %}bg-primary/10{% else %}hover:bg-surface-dark{% endif %} transition">
+
+                {# Rank #}
+                <div class="px-4 py-4 flex items-center">
+                    {% if entry.rank <= 3 %}
+                    <span class="text-sm font-black {% if entry.rank == 1 %}text-yellow-400{% elif entry.rank == 2 %}text-slate-400{% else %}text-amber-600{% endif %}">
+                        #{{ entry.rank }}
+                    </span>
+                    {% else %}
+                    <span class="text-sm text-text-muted">{{ entry.rank }}</span>
+                    {% endif %}
+                </div>
+
+                {# Player #}
+                <div class="px-4 py-4 flex items-center gap-3">
+                    <div class="flex items-center justify-center w-8 h-8 rounded-full {% if is_current %}bg-primary{% else %}bg-surface-dark border border-border-dark{% endif %} text-white text-sm font-bold shrink-0">
+                        {{ (entry.user.nickname or entry.user.username or 'U')[0] | upper }}
+                    </div>
+                    <div>
+                        <p class="text-sm font-bold {% if is_current %}text-primary{% else %}text-slate-100{% endif %}">
+                            {{ entry.user.nickname or entry.user.username }}
+                            {% if is_current %}<span class="text-xs font-normal text-text-muted">(You)</span>{% endif %}
+                        </p>
+                        <p class="text-xs text-text-muted">{{ (entry.user.wins or 0) }}W / {{ (entry.user.losses or 0) }}L</p>
+                    </div>
+                </div>
+
+                {# Aura #}
+                <div class="px-4 py-4 flex items-center justify-end">
+                    <span class="text-sm font-bold text-primary flex items-center gap-1">
+                        <span class="material-symbols-outlined text-xs ms-fill">diamond</span>
+                        {{ (entry.user.aura or 0) | int }}
+                    </span>
+                </div>
+
+                {# Win rate #}
+                <div class="px-4 py-4 pr-6 flex items-center justify-end">
+                    <span class="text-sm font-bold text-slate-100">{{ entry.win_rate }}%</span>
+                </div>
+            </div>
+            {% endfor %}
+
+            {% if not users_with_stats %}
+            <div class="col-span-4 py-12 text-center">
+                <span class="material-symbols-outlined text-text-muted text-4xl">leaderboard</span>
+                <p class="text-text-muted text-sm mt-2">No users yet. Be the first to register!</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+function setTab(period) {
+    document.querySelectorAll('.leaderboard-tab').forEach(function(btn) {
+        btn.classList.remove('text-primary', 'border-primary', 'font-bold');
+        btn.classList.add('text-text-muted', 'border-transparent', 'font-medium');
+    });
+    var active = document.getElementById('tab-' + period);
+    if (active) {
+        active.classList.remove('text-text-muted', 'border-transparent', 'font-medium');
+        active.classList.add('text-primary', 'border-primary', 'font-bold');
+    }
+}
+</script>
 {% endblock %}

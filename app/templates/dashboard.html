@@ -1,30 +1,301 @@
 {% extends "base.html" %}
-{% block title %}Dashboard{% endblock %}
+{% block title %}Dashboard – BET{% endblock %}
 {% block content %}
-<h1>Dashboard</h1>
-{% if user %}
-<p>Hello, {{ user.nickname or user.username }}. Aura: {{ user.aura }}</p>
-<p><a href="{{ url_for('main.create_bet') }}">Create a bet</a></p>
-{% endif %}
 
+{# ── Win/Loss notification banner ─────────────────────────── #}
 {% if recent_results %}
-<h2>Since your last visit</h2>
-<ul>
-    {% for p in recent_results %}
-    <li><strong>{{ p.bet.topic }}</strong> — You {{ 'won' if p.is_winner else 'lost' }} (stake: {{ p.stake }} Aura)</li>
-    {% endfor %}
-</ul>
+<div class="px-8 pt-4">
+    <div class="bg-surface-dark border border-border-dark rounded-xl p-4">
+        <h3 class="text-sm font-bold text-slate-100 mb-3 flex items-center gap-2">
+            <span class="material-symbols-outlined text-primary text-base">notifications</span>
+            Results since your last visit
+        </h3>
+        <div class="flex flex-wrap gap-2">
+            {% for p in recent_results %}
+            <a href="{{ url_for('main.bet_detail', bet_id=p.bet_id) }}"
+               class="flex items-center gap-2 px-3 py-1.5 rounded-lg border text-sm
+                      {% if p.is_winner %}bg-emerald-900/30 border-emerald-700/50 text-emerald-300
+                      {% else %}bg-red-900/30 border-red-700/50 text-red-300{% endif %}">
+                <span class="material-symbols-outlined text-base">{% if p.is_winner %}emoji_events{% else %}close{% endif %}</span>
+                <span class="font-medium">{{ p.bet.topic | truncate(40) }}</span>
+                <span class="text-xs opacity-70">{{ '+' if p.is_winner else '-' }}{{ p.stake }} Aura</span>
+            </a>
+            {% endfor %}
+        </div>
+    </div>
+</div>
 {% endif %}
 
-<h2>Open bets</h2>
-{% if bets %}
-{% for bet in bets %}
-<div class="card">
-    <a href="{{ url_for('main.bet_detail', bet_id=bet.id) }}"><strong>{{ bet.topic }}</strong></a>
-    <br><small>Difficulty: {{ bet.difficulty.value if bet.difficulty else '-' }} | Status: {{ bet.status.value }}</small>
+{# ── Main layout ──────────────────────────────────────────── #}
+<div class="flex gap-6 p-8 max-w-[1400px] mx-auto w-full">
+
+    {# ── Sidebar ─────────────────────────────────────────────── #}
+    <aside class="w-64 shrink-0 flex flex-col gap-4">
+
+        {# Wallet card #}
+        <div class="bg-surface-darker rounded-xl border border-border-dark p-5 flex flex-col gap-4 relative overflow-hidden">
+            <div class="absolute -right-6 -top-6 w-28 h-28 bg-primary/15 rounded-full blur-2xl pointer-events-none"></div>
+            <div class="relative z-10">
+                <p class="text-xs font-bold text-text-muted uppercase tracking-wider mb-3">Your Wallet</p>
+                <div class="flex items-center gap-2 mb-1">
+                    <span class="material-symbols-outlined text-primary text-2xl ms-fill">diamond</span>
+                    <span class="text-4xl font-black text-slate-100">{{ (user.aura or 0) | int }}</span>
+                </div>
+                <p class="text-xs text-text-muted">Aura Balance</p>
+            </div>
+            <button disabled
+                    class="relative z-10 w-full py-2.5 rounded-lg bg-primary/20 border border-primary/30 text-primary/60
+                           text-sm font-bold cursor-not-allowed flex items-center justify-center gap-2 mt-1">
+                <span class="material-symbols-outlined text-sm">add_circle</span>
+                Deposit Aura
+            </button>
+        </div>
+
+        {# Quick stats #}
+        <div class="bg-surface-darker rounded-xl border border-border-dark p-5 flex flex-col gap-3">
+            <p class="text-xs font-bold text-text-muted uppercase tracking-wider">Quick Stats</p>
+
+            <div class="flex items-center justify-between py-2 border-b border-border-dark/60">
+                <div class="flex items-center gap-2 text-sm text-slate-100">
+                    <span class="material-symbols-outlined text-primary text-base">pending</span>
+                    Active Bets
+                </div>
+                <span class="text-sm font-bold text-primary">{{ user.open_bets or 0 }}</span>
+            </div>
+            <div class="flex items-center justify-between py-2 border-b border-border-dark/60">
+                <div class="flex items-center gap-2 text-sm text-slate-100">
+                    <span class="material-symbols-outlined text-emerald-400 text-base">emoji_events</span>
+                    Won Bets
+                </div>
+                <span class="text-sm font-bold text-emerald-400">{{ user.wins or 0 }}</span>
+            </div>
+            <div class="flex items-center justify-between py-2">
+                <div class="flex items-center gap-2 text-sm text-slate-100">
+                    <span class="material-symbols-outlined text-red-400 text-base">close</span>
+                    Lost Bets
+                </div>
+                <span class="text-sm font-bold text-red-400">{{ user.losses or 0 }}</span>
+            </div>
+        </div>
+
+        {# Quick links #}
+        <div class="bg-surface-darker rounded-xl border border-border-dark p-5 flex flex-col gap-2">
+            <p class="text-xs font-bold text-text-muted uppercase tracking-wider mb-1">Quick Links</p>
+            <a href="{{ url_for('main.create_bet') }}"
+               class="flex items-center gap-2 px-3 py-2 rounded-lg bg-primary/10 hover:bg-primary/20 border border-primary/30 text-primary text-sm font-bold transition">
+                <span class="material-symbols-outlined text-base">add_circle</span>
+                Create a Bet
+            </a>
+            <a href="{{ url_for('main.profile') }}"
+               class="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-surface-dark border border-transparent hover:border-border-dark text-text-muted hover:text-slate-100 text-sm transition">
+                <span class="material-symbols-outlined text-base">person</span>
+                My Profile
+            </a>
+            <a href="{{ url_for('main.leaderboard') }}"
+               class="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-surface-dark border border-transparent hover:border-border-dark text-text-muted hover:text-slate-100 text-sm transition">
+                <span class="material-symbols-outlined text-base">leaderboard</span>
+                Leaderboard
+            </a>
+        </div>
+    </aside>
+
+    {# ── Main content ─────────────────────────────────────────── #}
+    <div class="flex-1 min-w-0">
+
+        {# Header row #}
+        <div class="flex items-center justify-between mb-4">
+            <div>
+                <h1 class="text-3xl font-black tracking-tight">Active Bets</h1>
+                <p id="bet-count" class="text-text-muted text-sm mt-1">
+                    {{ bets | length }} open bet{{ 's' if bets | length != 1 else '' }} available
+                </p>
+            </div>
+            <a href="{{ url_for('main.create_bet') }}"
+               class="flex items-center gap-2 px-5 py-2.5 rounded-lg bg-primary hover:bg-primary/80 text-white text-sm font-bold transition shadow-lg shadow-primary/20">
+                <span class="material-symbols-outlined text-base">add</span>
+                New Bet
+            </a>
+        </div>
+
+        {# Filter bar #}
+        {% if bets %}
+        <div class="flex items-center gap-2 mb-5 flex-wrap">
+            <span class="material-symbols-outlined text-text-muted text-sm">filter_list</span>
+            <span class="text-xs text-text-muted font-bold uppercase tracking-wider mr-1">Filter:</span>
+            {% for f_id, f_label in [('all','All'), ('easy','Easy'), ('medium','Medium'), ('hard','Hard')] %}
+            <button onclick="filterBets('{{ f_id }}')" id="filter-{{ f_id }}"
+                    class="filter-btn px-3 py-1.5 rounded-lg text-sm font-bold border transition
+                           bg-surface-dark border-border-dark text-text-muted hover:text-slate-100 hover:border-primary/40">
+                {{ f_label }}
+            </button>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        {% if bets %}
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-5" id="bet-grid">
+            {% for bet in bets %}
+            {% set diff = bet.difficulty.value if bet.difficulty else 'medium' %}
+            <div class="bet-card-item bg-surface-darker rounded-xl border border-border-dark overflow-hidden
+                        flex flex-col hover:border-primary/40 transition-all group"
+                 data-diff="{{ diff }}">
+
+                {# ── Card image header with overlay ─── #}
+                <div class="relative h-44 overflow-hidden">
+                    {# Gradient background #}
+                    <div class="absolute inset-0
+                        {% if diff == 'easy' %}bg-gradient-to-br from-emerald-950 via-teal-900 to-emerald-950
+                        {% elif diff == 'hard' %}bg-gradient-to-br from-red-950 via-rose-900 to-orange-950
+                        {% else %}bg-gradient-to-br from-violet-950 via-purple-900 to-indigo-950{% endif %}
+                        group-hover:scale-105 transition-transform duration-500">
+                    </div>
+
+                    {# Background decorative icon #}
+                    <span class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 material-symbols-outlined text-white/10 select-none"
+                          style="font-size: 9rem; line-height: 1;">
+                        {% if 'rain' in bet.topic | lower or 'weather' in bet.topic | lower %}thunderstorm
+                        {% elif 'game' in bet.topic | lower or 'sport' in bet.topic | lower or 'football' in bet.topic | lower or 'basketball' in bet.topic | lower %}sports_esports
+                        {% elif 'movie' in bet.topic | lower or 'film' in bet.topic | lower or 'oscar' in bet.topic | lower %}movie
+                        {% elif 'race' in bet.topic | lower or 'f1' in bet.topic | lower or 'car' in bet.topic | lower %}directions_car
+                        {% elif 'food' in bet.topic | lower or 'eat' in bet.topic | lower or 'noodle' in bet.topic | lower %}restaurant
+                        {% elif 'ai' in bet.topic | lower or 'tech' in bet.topic | lower %}computer
+                        {% else %}casino{% endif %}
+                    </span>
+
+                    {# Difficulty badge – top right #}
+                    <span class="absolute top-3 right-3 z-10 px-2.5 py-1 rounded-full text-xs font-bold uppercase tracking-wider
+                        {% if diff == 'easy' %}bg-emerald-900/90 text-emerald-300 border border-emerald-700/70
+                        {% elif diff == 'hard' %}bg-red-900/90 text-red-300 border border-red-700/70
+                        {% else %}bg-yellow-900/90 text-yellow-300 border border-yellow-700/70{% endif %}">
+                        {{ diff }}
+                    </span>
+
+                    {# End date badge – top left #}
+                    {% if bet.end_date %}
+                    <span class="absolute top-3 left-3 z-10 flex items-center gap-1 px-2 py-1 rounded-md bg-black/60 text-xs text-slate-300">
+                        <span class="material-symbols-outlined text-xs">schedule</span>
+                        {{ bet.end_date.strftime('%b %d') }}
+                    </span>
+                    {% endif %}
+
+                    {# Dark gradient overlay for text readability #}
+                    <div class="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-black/95 via-black/60 to-transparent pointer-events-none"></div>
+
+                    {# Title + description overlaid at bottom #}
+                    <a href="{{ url_for('main.bet_detail', bet_id=bet.id) }}"
+                       class="absolute bottom-0 left-0 right-0 p-4 z-10 hover:opacity-90 transition-opacity">
+                        <h3 class="font-bold text-white text-base leading-snug line-clamp-2 group-hover:text-primary/90 transition-colors">
+                            {{ bet.topic }}
+                        </h3>
+                        {% if bet.description %}
+                        <p class="text-xs text-slate-300/75 line-clamp-1 mt-1">{{ bet.description }}</p>
+                        {% endif %}
+                    </a>
+                </div>
+
+                {# ── Stats row: PRIZE POOL + PARTICIPANTS ─── #}
+                <div class="flex items-center justify-between px-4 py-3 border-b border-border-dark bg-surface-dark/50">
+                    <div class="flex flex-col gap-0.5">
+                        <span class="text-xs font-bold text-text-muted uppercase tracking-wider">Prize Pool</span>
+                        <span class="flex items-center gap-1 text-primary font-bold text-sm">
+                            <span class="material-symbols-outlined text-xs ms-fill">diamond</span>
+                            {{ bet_pools[bet.id] }} Aura
+                        </span>
+                    </div>
+                    <div class="w-px h-8 bg-border-dark"></div>
+                    <div class="flex flex-col gap-0.5 items-end">
+                        <span class="text-xs font-bold text-text-muted uppercase tracking-wider">Participants</span>
+                        <span class="flex items-center gap-1 text-slate-100 font-bold text-sm">
+                            <span class="material-symbols-outlined text-xs">group</span>
+                            {{ bet.participations.count() }}
+                        </span>
+                    </div>
+                </div>
+
+                {# ── Action button ─── #}
+                <div class="p-3">
+                    {% if bet.id in user_created_bet_ids %}
+                    <a href="{{ url_for('main.bet_detail', bet_id=bet.id) }}"
+                       class="w-full py-2.5 rounded-lg border border-primary/40 text-primary text-sm font-bold
+                              text-center transition hover:bg-primary/10 flex items-center justify-center gap-2">
+                        <span class="material-symbols-outlined text-sm">settings</span>
+                        Manage Bet
+                    </a>
+                    {% elif bet.id in user_joined_bet_ids %}
+                    <a href="{{ url_for('main.bet_detail', bet_id=bet.id) }}"
+                       class="w-full py-2.5 rounded-lg border border-emerald-700/50 text-emerald-400 text-sm font-bold
+                              text-center transition hover:bg-emerald-900/20 flex items-center justify-center gap-2">
+                        <span class="material-symbols-outlined text-sm">check_circle</span>
+                        Already Joined
+                    </a>
+                    {% else %}
+                    <a href="{{ url_for('main.bet_detail', bet_id=bet.id) }}"
+                       class="w-full py-2.5 rounded-lg bg-primary hover:bg-primary/80 text-white text-sm font-bold
+                              text-center transition shadow-sm shadow-primary/20 flex items-center justify-center gap-2">
+                        <span class="material-symbols-outlined text-sm">casino</span>
+                        Join Bet
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        {% else %}
+        <div class="flex flex-col items-center justify-center py-20 text-center">
+            <span class="material-symbols-outlined text-text-muted text-6xl mb-4">casino</span>
+            <h3 class="text-xl font-bold text-slate-100 mb-2">No open bets yet</h3>
+            <p class="text-text-muted text-sm mb-6">Be the first to create a prediction bet!</p>
+            <a href="{{ url_for('main.create_bet') }}"
+               class="px-6 py-3 rounded-lg bg-primary hover:bg-primary/80 text-white font-bold transition shadow-lg shadow-primary/20 flex items-center gap-2">
+                <span class="material-symbols-outlined text-base">add</span>
+                Create First Bet
+            </a>
+        </div>
+        {% endif %}
+    </div>
 </div>
-{% endfor %}
-{% else %}
-<p>No open bets.</p>
-{% endif %}
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+(function() {
+    let activeFilter = 'all';
+
+    function filterBets(diff) {
+        activeFilter = diff;
+        const cards = document.querySelectorAll('.bet-card-item');
+        let count = 0;
+        cards.forEach(function(card) {
+            if (diff === 'all' || card.dataset.diff === diff) {
+                card.style.display = '';
+                count++;
+            } else {
+                card.style.display = 'none';
+            }
+        });
+
+        // Update button styles
+        document.querySelectorAll('.filter-btn').forEach(function(btn) {
+            btn.classList.remove('bg-primary', 'text-white', 'border-primary/60');
+            btn.classList.add('bg-surface-dark', 'text-text-muted', 'border-border-dark');
+        });
+        var active = document.getElementById('filter-' + diff);
+        if (active) {
+            active.classList.remove('bg-surface-dark', 'text-text-muted', 'border-border-dark');
+            active.classList.add('bg-primary', 'text-white', 'border-primary/60');
+        }
+
+        // Update count text
+        var countEl = document.getElementById('bet-count');
+        if (countEl) {
+            countEl.textContent = count + ' open bet' + (count !== 1 ? 's' : '') + ' available';
+        }
+    }
+
+    // Expose globally and init
+    window.filterBets = filterBets;
+    filterBets('all');
+})();
+</script>
 {% endblock %}
