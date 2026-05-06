@@ -216,8 +216,7 @@ PYEOF
             echo "Pipeline failed at stage '${env.STAGE_NAME}'. Check logs above."
         }
         always {
-            /* cleanWs() requires ws-cleanup plugin; deleteDir() is always available */
-            cleanWs notFailBuild: true
+            deleteDir() /* built-in — no plugin required */
         }
     }
 }
