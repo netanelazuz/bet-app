@@ -1,0 +1,40 @@
+# Python
+__pycache__/
+*.py[cod]
+*.so
+.Python
+
+# Virtual environments
+.venv/
+venv/
+
+# Env files and secrets
+.env
+.env.*
+!.env.example
+
+# Local databases
+*.db
+app.db
+
+# Test and coverage artifacts
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Flask instance folder (local SQLite / instance-specific config)
+instance/
+
+# IDE / editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Working / planning documents not part of the codebase
+cursor_project_roadmap_planning.md

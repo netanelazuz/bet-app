@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block title %}Edit Profile – BET{% endblock %}
+{% block content %}
+<div class="flex items-center justify-center min-h-[80vh] px-6 py-8">
+    <div class="w-full max-w-lg">
+
+        <div class="bg-surface-darker rounded-2xl border border-border-dark p-8 shadow-xl">
+
+            {# Header #}
+            <div class="flex items-center gap-4 mb-8">
+                <div class="flex items-center justify-center w-14 h-14 rounded-xl bg-primary text-white text-2xl font-black">
+                    {{ (user.nickname or user.username or 'U')[0] | upper }}
+                </div>
+                <div>
+                    <h1 class="text-xl font-black text-slate-100">Edit Profile</h1>
+                    <p class="text-text-muted text-sm">@{{ user.username }}</p>
+                </div>
+            </div>
+
+            <form method="post" action="{{ url_for('main.edit_profile') }}" class="flex flex-col gap-5">
+
+                <label class="flex flex-col gap-1.5">
+                    <span class="text-sm font-bold text-slate-100 flex items-center justify-between">
+                        Nickname
+                        <span class="font-normal text-text-muted text-xs">Displayed to other users</span>
+                    </span>
+                    <input type="text" name="nickname" maxlength="80"
+                           value="{{ user.nickname or '' }}"
+                           placeholder="{{ user.username }}"
+                           class="form-input w-full rounded-lg bg-surface-dark border border-border-dark text-slate-100
+                                  placeholder:text-text-muted px-4 py-3 text-sm
+                                  focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition"/>
+                </label>
+
+                <label class="flex flex-col gap-1.5">
+                    <span class="text-sm font-bold text-slate-100 flex items-center justify-between">
+                        Bio
+                        <span class="font-normal text-text-muted text-xs">Max 500 characters</span>
+                    </span>
+                    <textarea name="bio" rows="4" maxlength="500"
+                              placeholder="Tell your group something about yourself..."
+                              class="form-textarea w-full rounded-lg bg-surface-dark border border-border-dark text-slate-100
+                                     placeholder:text-text-muted px-4 py-3 text-sm resize-none
+                                     focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition">{{ user.bio or '' }}</textarea>
+                </label>
+
+                <div class="flex items-center justify-end gap-4 pt-2 border-t border-border-dark">
+                    <a href="{{ url_for('main.profile') }}"
+                       class="px-6 py-3 rounded-lg text-text-muted hover:text-slate-100 font-bold transition-colors text-sm">
+                        Cancel
+                    </a>
+                    <button type="submit"
+                            class="px-8 py-3 rounded-lg bg-primary hover:bg-primary/80 text-white font-bold text-sm
+                                   transition shadow-lg shadow-primary/20 flex items-center gap-2">
+                        <span class="material-symbols-outlined text-base">save</span>
+                        Save Changes
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

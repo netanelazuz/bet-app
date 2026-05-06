@@ -1,0 +1,43 @@
+version: "3.9"
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: bet-db
+    environment:
+      POSTGRES_DB: bet_db
+      POSTGRES_USER: bet_user
+      POSTGRES_PASSWORD: bet_password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U bet_user -d bet_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    ports:
+      - "5432:5432"
+
+  app:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: bet-app
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      FLASK_ENV: production
+      SECRET_KEY: change-me-in-production
+      JWT_SECRET_KEY: change-me-in-production
+      JWT_ACCESS_TOKEN_EXPIRES: 3600
+      DATABASE_URL: postgresql://bet_user:bet_password@db:5432/bet_db
+      GUNICORN_WORKERS: 2
+      GUNICORN_THREADS: 2
+      GUNICORN_TIMEOUT: 60
+    ports:
+      - "5000:5000"
+    restart: unless-stopped
+
+volumes:
+  postgres_data:

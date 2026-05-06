@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+{% block title %}Register – BET{% endblock %}
+{% block content %}
+<div class="flex items-center justify-center min-h-[80vh] px-6 py-8">
+    <div class="w-full max-w-md">
+
+        <div class="bg-surface-darker rounded-2xl border border-border-dark p-8 shadow-xl">
+            <div class="flex flex-col items-center gap-3 mb-8">
+                <span class="material-symbols-outlined text-primary text-4xl">person_add</span>
+                <h1 class="text-2xl font-black tracking-tight">Create Account</h1>
+                <p class="text-text-muted text-sm">Join the BET prediction platform</p>
+            </div>
+
+            <form method="post" action="{{ url_for('auth.register') }}" class="flex flex-col gap-5">
+                <label class="flex flex-col gap-1.5">
+                    <span class="text-sm font-bold text-slate-100">Username <span class="text-red-400">*</span></span>
+                    <input type="text" name="username" required minlength="2" maxlength="80"
+                           placeholder="e.g. BetMaster99"
+                           autocomplete="username"
+                           class="form-input w-full rounded-lg bg-surface-dark border border-border-dark text-slate-100
+                                  placeholder:text-text-muted px-4 py-3 text-sm
+                                  focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition"/>
+                    <span class="text-xs text-text-muted">Letters, numbers, underscores and dashes only (2–80 chars).</span>
+                </label>
+
+                <label class="flex flex-col gap-1.5">
+                    <span class="text-sm font-bold text-slate-100">Password <span class="text-red-400">*</span></span>
+                    <input type="password" name="password" required minlength="6"
+                           placeholder="Min. 6 characters"
+                           autocomplete="new-password"
+                           class="form-input w-full rounded-lg bg-surface-dark border border-border-dark text-slate-100
+                                  placeholder:text-text-muted px-4 py-3 text-sm
+                                  focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition"/>
+                </label>
+
+                <label class="flex flex-col gap-1.5">
+                    <span class="text-sm font-bold text-slate-100 flex justify-between">
+                        Nickname
+                        <span class="font-normal text-text-muted">Optional</span>
+                    </span>
+                    <input type="text" name="nickname" maxlength="80"
+                           placeholder="Display name"
+                           class="form-input w-full rounded-lg bg-surface-dark border border-border-dark text-slate-100
+                                  placeholder:text-text-muted px-4 py-3 text-sm
+                                  focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition"/>
+                </label>
+
+                <label class="flex flex-col gap-1.5">
+                    <span class="text-sm font-bold text-slate-100 flex justify-between">
+                        Bio
+                        <span class="font-normal text-text-muted">Optional</span>
+                    </span>
+                    <textarea name="bio" rows="2" maxlength="500"
+                              placeholder="Tell us about yourself..."
+                              class="form-textarea w-full rounded-lg bg-surface-dark border border-border-dark text-slate-100
+                                     placeholder:text-text-muted px-4 py-3 text-sm resize-none
+                                     focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition"></textarea>
+                </label>
+
+                <div class="flex items-start gap-2 p-3 rounded-lg bg-primary/10 border border-primary/30">
+                    <span class="material-symbols-outlined text-primary text-base mt-0.5">workspace_premium</span>
+                    <p class="text-xs text-text-muted">New accounts receive <span class="text-primary font-bold">1,000 Aura</span> to start betting right away.</p>
+                </div>
+
+                <button type="submit"
+                        class="mt-1 w-full py-3 rounded-lg bg-primary hover:bg-primary/80 text-white font-bold text-sm
+                               transition shadow-lg shadow-primary/20 flex items-center justify-center gap-2">
+                    <span class="material-symbols-outlined text-base">rocket_launch</span>
+                    Create Account
+                </button>
+            </form>
+
+            <p class="text-center text-sm text-text-muted mt-6">
+                Already have an account?
+                <a href="{{ url_for('auth.login') }}" class="text-primary hover:text-primary/80 font-bold transition">
+                    Sign in
+                </a>
+            </p>
+        </div>
+    </div>
+</div>
+{% endblock %}
