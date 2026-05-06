@@ -17,7 +17,6 @@
 pipeline {
     agent {
         kubernetes {
-            label 'bet-agent'
             defaultContainer 'jnlp'
             yaml """
 apiVersion: v1
@@ -217,7 +216,8 @@ PYEOF
             echo "Pipeline failed at stage '${env.STAGE_NAME}'. Check logs above."
         }
         always {
-            cleanWs()
+            /* cleanWs() requires ws-cleanup plugin; deleteDir() is always available */
+            cleanWs notFailBuild: true
         }
     }
 }
