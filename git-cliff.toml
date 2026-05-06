@@ -1,0 +1,65 @@
+# git-cliff configuration for the BET predictions repo.
+# Reads Conventional Commits and determines the next SemVer bump.
+#
+# Commit types that trigger a version bump:
+#   feat      → minor bump  (0.x.0)
+#   fix       → patch bump  (0.0.x)
+#   feat!     → major bump  (x.0.0)  (breaking change)
+#
+# All other types (chore, docs, refactor, test …) are included in the
+# changelog but do NOT trigger a bump unless marked as breaking.
+
+[changelog]
+header = """
+# Changelog\n
+All notable changes to BET are documented here.\n
+"""
+body = """
+{% if version %}\
+## [{{ version | trim_start_matches(pat="v") }}] - {{ timestamp | date(format="%Y-%m-%d") }}
+{% else %}\
+## [unreleased]
+{% endif %}\
+{% for group, commits in commits | group_by(attribute="group") %}
+### {{ group | striptags | trim | upper_first }}
+{% for commit in commits %}
+- {% if commit.breaking %}[**breaking**] {% endif %}{{ commit.message | upper_first }}\
+{% endfor %}
+{% endfor %}\n
+"""
+footer = ""
+trim = true
+
+[git]
+# Parse Conventional Commits (https://www.conventionalcommits.org/)
+conventional_commits = true
+filter_unconventional = true
+split_commits = false
+
+# Map commit types to changelog sections
+commit_parsers = [
+  { message = "^feat",     group = "Features"          },
+  { message = "^fix",      group = "Bug Fixes"         },
+  { message = "^perf",     group = "Performance"       },
+  { message = "^refactor", group = "Refactoring"       },
+  { message = "^test",     group = "Testing"           },
+  { message = "^docs",     group = "Documentation"     },
+  { message = "^chore",    group = "Miscellaneous"     },
+  { message = "^ci",       group = "CI/CD"             },
+  { message = "^build",    group = "Build"             },
+  { message = "^revert",   group = "Reverts"           },
+]
+
+# Commits to exclude from the changelog (automated chore commits)
+commit_preprocessors = [
+  { pattern = "\\(#([0-9]+)\\)", replace = "([#${1}])" },
+]
+
+filter_commits = false
+tag_pattern = "v[0-9].*"
+
+# Include only commits since the last tag
+skip_tags = ""
+ignore_tags = ""
+topo_order = false
+sort_commits = "oldest"

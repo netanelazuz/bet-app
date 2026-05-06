@@ -1,0 +1,251 @@
+{% extends "base.html" %}
+{% block title %}{{ user.nickname or user.username }} – Profile{% endblock %}
+{% block content %}
+<div class="max-w-5xl mx-auto px-8 py-8 flex flex-col gap-6">
+
+    {# ── Profile header card ──────────────────────────────── #}
+    <div class="bg-surface-darker rounded-2xl border border-border-dark p-6 flex flex-col sm:flex-row items-start sm:items-center gap-6 relative overflow-hidden">
+        <div class="absolute -right-10 -top-10 w-48 h-48 bg-primary/10 rounded-full blur-3xl pointer-events-none"></div>
+
+        {# Avatar #}
+        <div class="relative z-10 flex items-center justify-center w-20 h-20 rounded-2xl bg-primary text-white text-3xl font-black shrink-0">
+            {{ (user.nickname or user.username or 'U')[0] | upper }}
+        </div>
+
+        {# User info #}
+        <div class="flex-1 relative z-10">
+            <h1 class="text-2xl font-black text-slate-100">{{ user.nickname or user.username }}</h1>
+            <p class="text-text-muted text-sm">@{{ user.username }}</p>
+            {% if user.bio %}
+            <p class="text-slate-300 text-sm mt-2 italic">"{{ user.bio }}"</p>
+            {% endif %}
+            <p class="text-xs text-text-muted mt-2 flex items-center gap-1">
+                <span class="material-symbols-outlined text-xs">calendar_month</span>
+                Joined {{ user.created_at.strftime('%b %Y') if user.created_at else 'recently' }}
+            </p>
+        </div>
+
+        {# Aura total #}
+        <div class="relative z-10 text-right shrink-0">
+            <p class="text-xs font-bold text-text-muted uppercase tracking-wider mb-1">Total Aura</p>
+            <div class="flex items-center gap-2 justify-end">
+                <span class="material-symbols-outlined text-primary text-2xl ms-fill">diamond</span>
+                <span class="text-4xl font-black text-slate-100">{{ (user.aura or 0) | int }}</span>
+            </div>
+            {% set growth = (((user.aura or 0) - starting_aura) / starting_aura * 100) | round(1) %}
+            <p class="text-xs {% if growth >= 0 %}text-emerald-400{% else %}text-red-400{% endif %} mt-1 flex items-center justify-end gap-1">
+                <span class="material-symbols-outlined text-xs">{% if growth >= 0 %}trending_up{% else %}trending_down{% endif %}</span>
+                {{ '+' if growth >= 0 else '' }}{{ growth }}% All Time
+            </p>
+            <p class="text-xs text-text-muted mt-1 flex items-center justify-end gap-1">
+                <span class="material-symbols-outlined text-xs">leaderboard</span>
+                Rank #{{ rank }}
+            </p>
+            <a href="{{ url_for('main.edit_profile') }}"
+               class="inline-flex items-center gap-1.5 mt-3 px-4 py-1.5 rounded-lg border border-border-dark hover:border-primary/50 bg-surface-dark hover:bg-surface-darker text-text-muted hover:text-slate-100 text-sm font-medium transition">
+                <span class="material-symbols-outlined text-sm">edit</span>
+                Edit Profile
+            </a>
+        </div>
+    </div>
+
+    {# ── Stats row ─────────────────────────────────────────── #}
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+        {# Wins #}
+        <div class="bg-surface-darker rounded-xl border border-border-dark p-5 flex flex-col gap-2 relative overflow-hidden">
+            <div class="absolute right-4 bottom-3 opacity-10">
+                <span class="material-symbols-outlined text-emerald-400 ms-fill" style="font-size: 5rem;">emoji_events</span>
+            </div>
+            <div class="flex items-center justify-between relative z-10">
+                <span class="text-xs font-bold text-text-muted uppercase tracking-wider">Total Wins</span>
+                <span class="material-symbols-outlined text-emerald-400 text-xl">emoji_events</span>
+            </div>
+            <p class="text-5xl font-black text-slate-100 relative z-10">{{ user.wins or 0 }}</p>
+            <p class="text-xs text-emerald-400 flex items-center gap-1 relative z-10">
+                <span class="material-symbols-outlined text-xs">trending_up</span>
+                All Time
+            </p>
+        </div>
+
+        {# Losses #}
+        <div class="bg-surface-darker rounded-xl border border-border-dark p-5 flex flex-col gap-2 relative overflow-hidden">
+            <div class="absolute right-4 bottom-3 opacity-10">
+                <span class="material-symbols-outlined text-red-400 ms-fill" style="font-size: 5rem;">mood_bad</span>
+            </div>
+            <div class="flex items-center justify-between relative z-10">
+                <span class="text-xs font-bold text-text-muted uppercase tracking-wider">Total Losses</span>
+                <span class="material-symbols-outlined text-red-400 text-xl">mood_bad</span>
+            </div>
+            <p class="text-5xl font-black text-slate-100 relative z-10">{{ user.losses or 0 }}</p>
+            <p class="text-xs text-red-400 flex items-center gap-1 relative z-10">
+                <span class="material-symbols-outlined text-xs">trending_down</span>
+                All Time
+            </p>
+        </div>
+    </div>
+
+    {# ── Win/Loss Performance chart ──────────────────────────── #}
+    <div class="bg-surface-darker rounded-xl border border-border-dark p-5 flex flex-col gap-4">
+        <div class="flex items-center justify-between flex-wrap gap-3">
+            <div>
+                <h2 class="font-bold text-slate-100 flex items-center gap-2">
+                    <span class="material-symbols-outlined text-primary text-base">bar_chart</span>
+                    Win/Loss Ratio
+                </h2>
+                <p class="text-text-muted text-xs mt-0.5">Overall performance breakdown</p>
+            </div>
+            <span class="px-3 py-1 rounded-full bg-emerald-900/30 text-emerald-400 text-sm font-bold border border-emerald-700/30">
+                {{ win_rate }}% Win Rate
+            </span>
+        </div>
+
+        {# Split bar #}
+        {% set total_played = (user.wins or 0) + (user.losses or 0) %}
+        <div>
+            <div class="flex items-center justify-between mb-2 text-xs font-bold">
+                <span class="flex items-center gap-1 text-emerald-400">
+                    <span class="material-symbols-outlined text-xs">emoji_events</span>
+                    Wins: {{ user.wins or 0 }}
+                </span>
+                <span class="text-text-muted">{{ total_played }} total</span>
+                <span class="flex items-center gap-1 text-red-400">
+                    Losses: {{ user.losses or 0 }}
+                    <span class="material-symbols-outlined text-xs">mood_bad</span>
+                </span>
+            </div>
+            <div class="w-full h-5 rounded-full bg-surface-dark overflow-hidden flex">
+                {% if total_played > 0 %}
+                <div class="h-full bg-gradient-to-r from-emerald-700 to-emerald-400 transition-all flex items-center justify-center"
+                     style="width: {{ ((user.wins or 0) / total_played * 100) | int }}%">
+                    {% if (user.wins or 0) / total_played > 0.15 %}
+                    <span class="text-xs font-black text-white/90">{{ win_rate }}%</span>
+                    {% endif %}
+                </div>
+                <div class="h-full bg-gradient-to-r from-red-700 to-red-500 transition-all"
+                     style="width: {{ ((user.losses or 0) / total_played * 100) | int }}%"></div>
+                {% else %}
+                <div class="h-full w-full bg-surface-darker flex items-center justify-center">
+                    <span class="text-xs text-text-muted">No games played yet</span>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        {# Stats grid #}
+        <div class="grid grid-cols-3 gap-3 pt-1">
+            <div class="flex flex-col items-center gap-1 p-3 rounded-lg bg-surface-dark border border-border-dark">
+                <span class="text-2xl font-black text-emerald-400">{{ user.wins or 0 }}</span>
+                <span class="text-xs text-text-muted">Wins</span>
+            </div>
+            <div class="flex flex-col items-center gap-1 p-3 rounded-lg bg-surface-dark border border-border-dark">
+                <span class="text-2xl font-black text-red-400">{{ user.losses or 0 }}</span>
+                <span class="text-xs text-text-muted">Losses</span>
+            </div>
+            <div class="flex flex-col items-center gap-1 p-3 rounded-lg bg-surface-dark border border-border-dark">
+                <span class="text-2xl font-black text-primary">{{ user.open_bets or 0 }}</span>
+                <span class="text-xs text-text-muted">Active</span>
+            </div>
+        </div>
+    </div>
+
+    {# ── Lower section: active bets + summary ─────────────── #}
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+        {# Active bets joined with pot size #}
+        <div class="bg-surface-darker rounded-xl border border-border-dark p-5 flex flex-col gap-4">
+            <div class="flex items-center justify-between">
+                <h2 class="font-bold text-slate-100 flex items-center gap-2">
+                    <span class="material-symbols-outlined text-primary text-base">pending</span>
+                    Active Bets
+                </h2>
+                <span class="px-2 py-0.5 rounded-full bg-primary/20 text-primary text-xs font-bold border border-primary/30">
+                    {{ open_bets_joined | length }} Active
+                </span>
+            </div>
+
+            {% if open_bets_joined %}
+            <div class="flex flex-col gap-2">
+                {% for bet in open_bets_joined %}
+                {% set participation = open_participations[loop.index0] %}
+                <a href="{{ url_for('main.bet_detail', bet_id=bet.id) }}"
+                   class="flex items-start gap-3 p-3 rounded-lg bg-surface-dark hover:bg-border-dark border border-border-dark hover:border-primary/30 transition">
+                    <div class="flex items-center justify-center w-9 h-9 rounded-lg bg-primary/20 shrink-0">
+                        <span class="material-symbols-outlined text-primary text-sm">casino</span>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <p class="text-sm font-bold text-slate-100 truncate">{{ bet.topic }}</p>
+                        <div class="flex items-center gap-3 mt-1.5 text-xs text-text-muted">
+                            <span class="flex items-center gap-0.5">
+                                <span class="material-symbols-outlined text-xs ms-fill text-primary">diamond</span>
+                                Stake: <span class="text-primary font-bold ml-0.5">{{ participation.stake }}</span>
+                            </span>
+                            <span class="text-border-dark">·</span>
+                            <span class="flex items-center gap-0.5">
+                                Pot: <span class="font-bold text-slate-100 ml-0.5">{{ bet_pools.get(bet.id, 0) }}</span>
+                            </span>
+                            <span class="text-border-dark">·</span>
+                            <span class="font-bold {% if participation.side == 'yes' %}text-emerald-400{% else %}text-red-400{% endif %}">
+                                {{ (participation.side or 'yes') | upper }}
+                            </span>
+                        </div>
+                    </div>
+                </a>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="text-center py-6">
+                <span class="material-symbols-outlined text-text-muted text-3xl">casino</span>
+                <p class="text-text-muted text-sm mt-2">No active bets joined yet.</p>
+                <a href="{{ url_for('main.dashboard') }}"
+                   class="inline-block mt-3 text-primary text-sm hover:underline">
+                    Browse open bets →
+                </a>
+            </div>
+            {% endif %}
+        </div>
+
+        {# Stats summary #}
+        <div class="bg-surface-darker rounded-xl border border-border-dark p-5 flex flex-col gap-4">
+            <h2 class="font-bold text-slate-100 flex items-center gap-2">
+                <span class="material-symbols-outlined text-primary text-base">analytics</span>
+                Account Summary
+            </h2>
+
+            <div class="flex flex-col gap-2.5">
+                <div class="flex items-center justify-between p-3 rounded-lg bg-surface-dark border border-border-dark">
+                    <span class="text-sm text-text-muted">Total Bets Played</span>
+                    <span class="text-sm font-bold text-slate-100">{{ (user.wins or 0) + (user.losses or 0) }}</span>
+                </div>
+                <div class="flex items-center justify-between p-3 rounded-lg bg-surface-dark border border-border-dark">
+                    <span class="text-sm text-text-muted">Current Aura</span>
+                    <span class="text-sm font-bold text-slate-100 flex items-center gap-1">
+                        <span class="material-symbols-outlined text-primary text-sm ms-fill">diamond</span>
+                        {{ (user.aura or 0) | int }}
+                    </span>
+                </div>
+                <div class="flex items-center justify-between p-3 rounded-lg bg-surface-dark border border-border-dark">
+                    <span class="text-sm text-text-muted">Starting Aura</span>
+                    <span class="text-sm font-bold text-text-muted flex items-center gap-1">
+                        <span class="material-symbols-outlined text-text-muted text-sm ms-fill">diamond</span>
+                        {{ starting_aura }}
+                    </span>
+                </div>
+                <div class="flex items-center justify-between p-3 rounded-lg bg-surface-dark border border-border-dark">
+                    <span class="text-sm text-text-muted">Leaderboard Rank</span>
+                    <span class="text-sm font-bold text-yellow-400 flex items-center gap-1">
+                        <span class="material-symbols-outlined text-sm">workspace_premium</span>
+                        #{{ rank }}
+                    </span>
+                </div>
+            </div>
+
+            <a href="{{ url_for('main.leaderboard') }}"
+               class="flex items-center justify-center gap-2 py-2.5 rounded-lg border border-border-dark hover:border-primary/50 text-text-muted hover:text-slate-100 text-sm font-medium transition mt-auto">
+                View Full Leaderboard
+                <span class="material-symbols-outlined text-sm">arrow_forward</span>
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}

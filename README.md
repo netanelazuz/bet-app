@@ -1,8 +1,58 @@
-# Predictions
+# BET – Private Social Prediction Platform (Application)
 
+Flask application: JWT auth, PostgreSQL, Dashboard, Profile, Leaderboard.
 
+**Phase 2 (Aura):** Create bet, join with variable stake (yes/no), creator cannot join own bet; close bet (creator sets winning side); Aura redistribution (losing pool × difficulty multiplier); win/loss notification on dashboard; logout.
+**Phase 3 (Containerization):** Production-ready Docker image (Gunicorn, non-root user) with automatic migration on container startup.
 
-## Getting started
+## Setup
+
+```bash
+python -m venv .venv
+.venv\Scripts\activate   # Windows
+pip install -r requirements.txt
+cp .env.example .env     # set SECRET_KEY, JWT_SECRET_KEY, DATABASE_URL
+```
+
+## Database
+
+```bash
+set FLASK_APP=run
+flask db upgrade
+```
+
+## Run
+
+```bash
+python run.py
+# or: flask run
+```
+
+## Tests
+
+```bash
+pytest tests/ -v
+```
+
+## Build Docker Image (Phase 3)
+
+```bash
+docker build -t bet-app:phase3 .
+```
+
+## Run Docker Image
+
+```bash
+docker run --rm -p 5000:5000 \
+  -e SECRET_KEY=change-me \
+  -e JWT_SECRET_KEY=change-me \
+  -e DATABASE_URL=postgresql://user:password@host:5432/bet_db \
+  bet-app:phase3
+```
+
+> Note: Kubernetes + Helm deployment will replace local compose workflow in the next phase.
+
+## Getting started (GitLab)
 
 To make it easy for you to get started with GitLab, here's a list of recommended next steps.
 
