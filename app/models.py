@@ -54,10 +54,10 @@ class Bet(db.Model):
     topic = db.Column(db.String(200), nullable=False)
     description = db.Column(db.Text, nullable=True)
     win_prize = db.Column(db.Integer, nullable=True)  # dynamic, can be computed
-    difficulty = db.Column(db.Enum(Difficulty), default=Difficulty.MEDIUM)
+    difficulty = db.Column(db.Enum(Difficulty, values_callable=lambda x: [e.value for e in x]), default=Difficulty.MEDIUM)
     end_date = db.Column(db.DateTime, nullable=True)
     end_condition = db.Column(db.String(200), nullable=True)
-    status = db.Column(db.Enum(BetStatus), default=BetStatus.OPEN)
+    status = db.Column(db.Enum(BetStatus, values_callable=lambda x: [e.value for e in x]), default=BetStatus.OPEN)
     report_count = db.Column(db.Integer, default=0)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     created_by_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
