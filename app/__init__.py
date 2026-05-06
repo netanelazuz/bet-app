@@ -2,6 +2,7 @@
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
+from prometheus_flask_exporter import PrometheusMetrics
 
 import sys
 from pathlib import Path
@@ -10,6 +11,7 @@ from config import Config
 
 db = SQLAlchemy()
 migrate = Migrate()
+metrics = PrometheusMetrics.for_app_factory()
 
 
 def create_app(config_class=Config) -> Flask:
@@ -17,6 +19,10 @@ def create_app(config_class=Config) -> Flask:
     app.config.from_object(config_class)
     db.init_app(app)
     migrate.init_app(app, db)
+
+    # Expose /metrics for Prometheus scraping.
+    # Automatically instruments all routes with request count and latency.
+    metrics.init_app(app)
 
     from app.auth import auth_bp
     from app.views import main_bp
