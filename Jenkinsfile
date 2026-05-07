@@ -1,29 +1,22 @@
 // ─────────────────────────────────────────────────────────────────────────────
-// BET – CI Pipeline
+// BET – Pipeline 1: CI + Build + Create MR
 //
-// Trigger logic:
-//   • MR opened/updated targeting main  → runs stages 1-3 (Checkout, Test, Version)
-//                                         Acts as a CI gate: must pass before merge.
-//   • MR accepted (merged) into main    → runs all 5 stages (full deploy)
-//   • Manual build from Jenkins UI      → runs all 5 stages
+// Trigger : Push to dev branch (GitLab webhook — Push events, dev branch only)
 //
 // Stages:
-//   1. Checkout        – clone predictions repo (source branch for open MR, main after merge)
-//   2. Test            – run pytest inside the python container
-//   3. Version         – determine next SemVer with git-cliff
-//   4. Build & Push    – build Docker image, tag :vX.Y.Z + :latest, push to Hub
-//                        (skipped for open MRs — only runs after merge)
-//   5. Update Infra    – bump image.tag in bet-infra/helm/bet/values.yaml
-//                        (ArgoCD auto-syncs from there; skipped for open MRs)
+//   1. Checkout   – clone the dev branch
+//   2. Test       – run pytest inside the python container
+//   3. Version    – determine next SemVer with git-cliff
+//   4. Build & Push – build Docker image, tag :vX.Y.Z + :latest, push to Hub
+//   5. Create MR  – open a GitLab Merge Request from dev → main (idempotent)
 //
 // Required Jenkins credentials:
-//   dockerhub-creds   – Username/Password  (Docker Hub login)
-//   gitlab-token      – Secret text        (GitLab PAT with api + write_repository)
+//   dockerhub-creds  – Username/Password  (Docker Hub login)
+//   gitlab-token     – Secret text        (GitLab PAT with api + write_repository)
 //
-// Agent pod design:
-//   - python container  : runs tests, git-cliff, ruamel.yaml YAML edits
-//   - docker container  : docker:27-cli — talks to the HOST docker daemon
-//                         via the mounted socket. No DinD needed.
+// Agent pod:
+//   - python  : tests, git-cliff, MR creation via GitLab API
+//   - docker  : docker:27-cli talking to host daemon via mounted socket
 // ─────────────────────────────────────────────────────────────────────────────
 
 pipeline {
@@ -72,11 +65,11 @@ spec:
     }
 
     environment {
-        DOCKER_IMAGE     = 'netanelazuz/bet-app'
-        INFRA_REPO_URL   = 'https://gitlab.com/sela-1119/students/netanelazuz/final_project/bet-infra.git'
-        INFRA_VALUES     = 'helm/bet/values.yaml'
-        GIT_AUTHOR_NAME  = 'Jenkins CI'
-        GIT_AUTHOR_EMAIL = 'jenkins@bet.local'
+        DOCKER_IMAGE      = 'netanelazuz/bet-app'
+        GITLAB_API_URL    = 'https://gitlab.com/api/v4'
+        GITLAB_PROJECT_ID = '77900502'   // predictions project numeric ID
+        GIT_AUTHOR_NAME   = 'Jenkins CI'
+        GIT_AUTHOR_EMAIL  = 'jenkins@bet.local'
     }
 
     options {
@@ -93,7 +86,7 @@ spec:
                 checkout scm
                 script {
                     env.GIT_COMMIT_SHORT = sh(script: "git rev-parse --short HEAD", returnStdout: true).trim()
-                    echo "Commit: ${env.GIT_COMMIT_SHORT}"
+                    echo "Branch: dev  |  Commit: ${env.GIT_COMMIT_SHORT}"
                 }
             }
         }
@@ -110,16 +103,12 @@ spec:
             }
             post {
                 failure {
-                    echo 'Tests failed — aborting pipeline. No image will be built.'
+                    echo 'Tests failed — aborting pipeline. No image will be built and no MR will be created.'
                 }
             }
         }
 
         // ── 3. Version ────────────────────────────────────────────────────────
-        // git-cliff reads Conventional Commits and bumps the version.
-        // If no tags exist yet it defaults to v0.1.0.
-        // python:3.12-slim has no git — install it before calling git-cliff.
-        // Tags are already present from jnlp Checkout — no fetch needed.
         stage('Version') {
             steps {
                 container('python') {
@@ -128,15 +117,10 @@ spec:
                     sh 'git config --global --add safe.directory "*"'
                     script {
                         def version = sh(
-                            script: '''
-                                git cliff --bumped-version 2>/dev/null || echo "v0.1.0"
-                            ''',
+                            script: 'git cliff --bumped-version 2>/dev/null || echo "v0.1.0"',
                             returnStdout: true
                         ).trim()
-
-                        // Normalise: ensure leading 'v'
                         if (!version.startsWith('v')) { version = "v${version}" }
-
                         env.APP_VERSION = version
                         echo "Next version: ${env.APP_VERSION}"
                     }
@@ -145,16 +129,7 @@ spec:
         }
 
         // ── 4. Build & Push ───────────────────────────────────────────────────
-        // Skipped for open MRs (CI gate only). Runs when MR is merged or manual.
         stage('Build & Push') {
-            when {
-                anyOf {
-                    // MR was accepted and merged into main
-                    environment name: 'gitlabMergeRequestState', value: 'merged'
-                    // Manual build from Jenkins UI (no GitLab context)
-                    expression { env.gitlabActionType == null }
-                }
-            }
             steps {
                 container('docker') {
                     withCredentials([usernamePassword(
@@ -180,15 +155,9 @@ spec:
             }
         }
 
-        // ── 5. Update Infra ───────────────────────────────────────────────────
-        // Writes the new image tag into bet-infra → ArgoCD auto-syncs.
-        stage('Update Infra') {
-            when {
-                anyOf {
-                    environment name: 'gitlabMergeRequestState', value: 'merged'
-                    expression { env.gitlabActionType == null }
-                }
-            }
+        // ── 5. Create MR ──────────────────────────────────────────────────────
+        // Opens a GitLab MR from dev → main (idempotent: skips if one already exists).
+        stage('Create MR') {
             steps {
                 container('python') {
                     withCredentials([string(
@@ -196,38 +165,54 @@ spec:
                         variable: 'GITLAB_TOKEN'
                     )]) {
                         sh """
-                            pip install --quiet ruamel.yaml
+                            pip install --quiet requests
 
-                            # Clone infra repo (strip https:// for token injection)
-                            git clone https://oauth2:\$GITLAB_TOKEN@\$(echo ${INFRA_REPO_URL} | sed 's|https://||') /tmp/bet-infra
-                            cd /tmp/bet-infra
+                            python3 - << 'PYEOF'
+import requests, os, sys
 
-                            # Bump image.tag using Python (preserves YAML comments)
-                            python3 - <<'PYEOF'
-from ruamel.yaml import YAML
-import sys, os
+api      = os.environ['GITLAB_API_URL']
+proj     = os.environ['GITLAB_PROJECT_ID']
+token    = os.environ['GITLAB_TOKEN']
+version  = os.environ['APP_VERSION']
+commit   = os.environ['GIT_COMMIT_SHORT']
 
-path = '${INFRA_VALUES}'
-version = '${env.APP_VERSION}'
+headers = {'PRIVATE-TOKEN': token, 'Content-Type': 'application/json'}
 
-yaml = YAML()
-yaml.preserve_quotes = True
-with open(path) as f:
-    data = yaml.load(f)
+# Check whether an open MR dev→main already exists
+resp = requests.get(
+    f'{api}/projects/{proj}/merge_requests',
+    params={'state': 'opened', 'source_branch': 'dev', 'target_branch': 'main'},
+    headers=headers, timeout=15
+)
+resp.raise_for_status()
+existing = resp.json()
 
-data['image']['tag'] = version
-print(f'Updated image.tag to {version}')
+if existing:
+    mr = existing[0]
+    print(f"MR already open: !{mr['iid']}  {mr['web_url']}")
+    sys.exit(0)
 
-with open(path, 'w') as f:
-    yaml.dump(data, f)
+# Create a new MR
+payload = {
+    'source_branch': 'dev',
+    'target_branch': 'main',
+    'title': f'chore(release): deploy {version} ({commit})',
+    'description': (
+        f'Automated release MR created by Jenkins Pipeline 1.\\n\\n'
+        f'- Image: `netanelazuz/bet-app:{version}`\\n'
+        f'- Commit: `{commit}`\\n\\n'
+        f'Approve and merge to trigger Pipeline 2 (Update Infra → ArgoCD deploy).'
+    ),
+    'remove_source_branch': False,
+}
+resp = requests.post(
+    f'{api}/projects/{proj}/merge_requests',
+    json=payload, headers=headers, timeout=15
+)
+resp.raise_for_status()
+mr = resp.json()
+print(f"MR created: !{mr['iid']}  {mr['web_url']}")
 PYEOF
-
-                            # Commit and push
-                            git config user.name  "${GIT_AUTHOR_NAME}"
-                            git config user.email "${GIT_AUTHOR_EMAIL}"
-                            git add ${INFRA_VALUES}
-                            git commit -m "chore(release): bump image.tag to ${env.APP_VERSION} [skip ci]"
-                            git push
                         """
                     }
                 }
@@ -238,10 +223,10 @@ PYEOF
 
     post {
         success {
-            echo "Pipeline complete — ${env.DOCKER_IMAGE}:${env.APP_VERSION} deployed."
+            echo "Pipeline 1 complete — ${env.DOCKER_IMAGE}:${env.APP_VERSION} pushed. MR dev→main opened."
         }
         failure {
-            echo "Pipeline failed at stage '${env.STAGE_NAME}'. Check logs above."
+            echo "Pipeline 1 failed. Check logs above."
         }
         always {
             script {

@@ -1,0 +1,148 @@
+// ─────────────────────────────────────────────────────────────────────────────
+// BET – Pipeline 2: Deploy (Update Infra)
+//
+// Trigger : Accepted (merged) Merge Request into main
+//           (GitLab webhook — Merge Request events, "merged" state)
+//
+// What it does:
+//   1. Checkout  – clone main to read the latest Docker image tag
+//   2. Version   – re-derive the version from git-cliff (same tag already on main)
+//   3. Update Infra – bump image.tag in bet-infra/helm/bet/values.yaml
+//                     ArgoCD auto-syncs → rolling deploy
+//
+// Required Jenkins credentials:
+//   gitlab-token  – Secret text  (GitLab PAT with api + write_repository)
+// ─────────────────────────────────────────────────────────────────────────────
+
+pipeline {
+    agent {
+        kubernetes {
+            defaultContainer 'jnlp'
+            yaml """
+apiVersion: v1
+kind: Pod
+spec:
+  containers:
+    - name: python
+      image: python:3.12-slim
+      command: [cat]
+      tty: true
+      resources:
+        requests:
+          cpu: 200m
+          memory: 256Mi
+        limits:
+          cpu: 500m
+          memory: 512Mi
+"""
+        }
+    }
+
+    environment {
+        INFRA_REPO_URL   = 'https://gitlab.com/sela-1119/students/netanelazuz/final_project/bet-infra.git'
+        INFRA_VALUES     = 'helm/bet/values.yaml'
+        DOCKER_IMAGE     = 'netanelazuz/bet-app'
+        GIT_AUTHOR_NAME  = 'Jenkins CI'
+        GIT_AUTHOR_EMAIL = 'jenkins@bet.local'
+    }
+
+    options {
+        timeout(time: 15, unit: 'MINUTES')
+        buildDiscarder(logRotator(numToKeepStr: '10'))
+        disableConcurrentBuilds()
+    }
+
+    stages {
+
+        // ── 1. Checkout ───────────────────────────────────────────────────────
+        stage('Checkout') {
+            steps {
+                checkout scm
+                script {
+                    env.GIT_COMMIT_SHORT = sh(script: "git rev-parse --short HEAD", returnStdout: true).trim()
+                    echo "Deploying commit: ${env.GIT_COMMIT_SHORT}"
+                }
+            }
+        }
+
+        // ── 2. Version ────────────────────────────────────────────────────────
+        // After the MR merge, main has the latest tag. git-cliff reads it.
+        stage('Version') {
+            steps {
+                container('python') {
+                    sh 'apt-get update -qq && apt-get install -y -qq git'
+                    sh 'pip install --quiet git-cliff'
+                    sh 'git config --global --add safe.directory "*"'
+                    script {
+                        def version = sh(
+                            script: 'git cliff --bumped-version 2>/dev/null || echo "v0.1.0"',
+                            returnStdout: true
+                        ).trim()
+                        if (!version.startsWith('v')) { version = "v${version}" }
+                        env.APP_VERSION = version
+                        echo "Deploying version: ${env.APP_VERSION}"
+                    }
+                }
+            }
+        }
+
+        // ── 3. Update Infra ───────────────────────────────────────────────────
+        stage('Update Infra') {
+            steps {
+                container('python') {
+                    withCredentials([string(
+                        credentialsId: 'gitlab-token',
+                        variable: 'GITLAB_TOKEN'
+                    )]) {
+                        sh """
+                            pip install --quiet ruamel.yaml
+
+                            git clone https://oauth2:\$GITLAB_TOKEN@\$(echo ${INFRA_REPO_URL} | sed 's|https://||') /tmp/bet-infra
+                            cd /tmp/bet-infra
+
+                            python3 - << 'PYEOF'
+from ruamel.yaml import YAML
+import os
+
+path    = os.environ['INFRA_VALUES']
+version = os.environ['APP_VERSION']
+
+yaml = YAML()
+yaml.preserve_quotes = True
+with open(path) as f:
+    data = yaml.load(f)
+
+data['image']['tag'] = version
+print(f'Updated image.tag to {version}')
+
+with open(path, 'w') as f:
+    yaml.dump(data, f)
+PYEOF
+
+                            git config user.name  "${GIT_AUTHOR_NAME}"
+                            git config user.email "${GIT_AUTHOR_EMAIL}"
+                            git add ${INFRA_VALUES}
+                            git commit -m "chore(release): bump image.tag to ${env.APP_VERSION} [skip ci]"
+                            git push
+                        """
+                    }
+                }
+            }
+        }
+
+    } // end stages
+
+    post {
+        success {
+            echo "Pipeline 2 complete — ${env.DOCKER_IMAGE}:${env.APP_VERSION} is now deploying via ArgoCD."
+        }
+        failure {
+            echo "Pipeline 2 failed. Check logs above."
+        }
+        always {
+            script {
+                try { deleteDir() } catch (e) { echo "Workspace cleanup skipped: ${e.message}" }
+            }
+        }
+    }
+}
