@@ -306,3 +306,4 @@ def platform_stats():
         total_users=total_users,
         total_participations=total_participations,
     )
+# /api/stats endpoint
