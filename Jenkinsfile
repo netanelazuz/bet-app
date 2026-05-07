@@ -138,11 +138,15 @@ spec:
         }
 
         // ── 4. Build & Push ───────────────────────────────────────────────────
+        // Only runs when triggered by an accepted (merged) MR or manually.
+        // Direct pushes to main do not trigger this pipeline.
         stage('Build & Push') {
             when {
                 anyOf {
-                    branch 'main'
-                    branch 'master'
+                    // Triggered by GitLab accepted MR webhook
+                    environment name: 'gitlabActionType', value: 'MERGE'
+                    // Manual / fallback build from Jenkins UI
+                    expression { env.gitlabActionType == null }
                 }
             }
             steps {
@@ -175,8 +179,8 @@ spec:
         stage('Update Infra') {
             when {
                 anyOf {
-                    branch 'main'
-                    branch 'master'
+                    environment name: 'gitlabActionType', value: 'MERGE'
+                    expression { env.gitlabActionType == null }
                 }
             }
             steps {
