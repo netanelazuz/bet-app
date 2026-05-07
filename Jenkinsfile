@@ -3,7 +3,7 @@
 //
 // Stages:
 //   1. Checkout        – clone predictions repo
-//   2. Test            – run pytest inside the app image
+//   2. Test            – run pytest inside the python container
 //   3. Version         – determine next SemVer with git-cliff
 //   4. Build & Push    – build Docker image, tag :vX.Y.Z + :latest, push to Hub
 //   5. Update Infra    – bump image.tag in bet-infra/helm/bet/values.yaml
@@ -12,6 +12,11 @@
 // Required Jenkins credentials:
 //   dockerhub-creds   – Username/Password  (Docker Hub login)
 //   gitlab-token      – Secret text        (GitLab PAT with api + write_repository)
+//
+// Agent pod design:
+//   - python container  : runs tests, git-cliff, ruamel.yaml YAML edits
+//   - docker container  : docker:27-cli — talks to the HOST docker daemon
+//                         via the mounted socket. No DinD needed.
 // ─────────────────────────────────────────────────────────────────────────────
 
 pipeline {
@@ -31,16 +36,26 @@ spec:
         requests:
           cpu: 200m
           memory: 512Mi
+        limits:
+          cpu: 500m
+          memory: 1Gi
     - name: docker
-      image: docker:24-dind
-      securityContext:
-        privileged: true
+      image: docker:27-cli
+      command: [cat]
+      tty: true
       env:
-        - name: DOCKER_TLS_CERTDIR
-          value: ""
+        - name: DOCKER_HOST
+          value: "unix:///var/run/docker.sock"
       volumeMounts:
         - name: docker-sock
           mountPath: /var/run/docker.sock
+      resources:
+        requests:
+          cpu: 200m
+          memory: 256Mi
+        limits:
+          cpu: 1000m
+          memory: 512Mi
   volumes:
     - name: docker-sock
       hostPath:
@@ -170,14 +185,14 @@ spec:
                         sh """
                             pip install --quiet ruamel.yaml
 
-                            # Clone infra repo
+                            # Clone infra repo (strip https:// for token injection)
                             git clone https://oauth2:\$GITLAB_TOKEN@\$(echo ${INFRA_REPO_URL} | sed 's|https://||') /tmp/bet-infra
                             cd /tmp/bet-infra
 
                             # Bump image.tag using Python (preserves YAML comments)
                             python3 - <<'PYEOF'
 from ruamel.yaml import YAML
-import sys
+import sys, os
 
 path = '${INFRA_VALUES}'
 version = '${env.APP_VERSION}'
@@ -216,7 +231,9 @@ PYEOF
             echo "Pipeline failed at stage '${env.STAGE_NAME}'. Check logs above."
         }
         always {
-            deleteDir() /* built-in — no plugin required */
+            script {
+                try { deleteDir() } catch (e) { echo "Workspace cleanup skipped: ${e.message}" }
+            }
         }
     }
 }
