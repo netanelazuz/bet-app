@@ -117,6 +117,7 @@ spec:
                 container('python') {
                     sh 'apt-get update -qq && apt-get install -y -qq git'
                     sh 'pip install --quiet git-cliff'
+                    sh 'git config --global --add safe.directory "*"'
                     script {
                         def version = sh(
                             script: '''
