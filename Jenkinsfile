@@ -112,6 +112,7 @@ spec:
         // git-cliff reads Conventional Commits and bumps the version.
         // If no tags exist yet it defaults to v0.1.0.
         // python:3.12-slim has no git — install it before calling git-cliff.
+        // Tags are already present from jnlp Checkout — no fetch needed.
         stage('Version') {
             steps {
                 container('python') {
@@ -121,7 +122,6 @@ spec:
                     script {
                         def version = sh(
                             script: '''
-                                git fetch --tags
                                 git cliff --bumped-version 2>/dev/null || echo "v0.1.0"
                             ''',
                             returnStdout: true
