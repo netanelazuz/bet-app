@@ -1,13 +1,20 @@
 // ─────────────────────────────────────────────────────────────────────────────
 // BET – CI Pipeline
 //
+// Trigger logic:
+//   • MR opened/updated targeting main  → runs stages 1-3 (Checkout, Test, Version)
+//                                         Acts as a CI gate: must pass before merge.
+//   • MR accepted (merged) into main    → runs all 5 stages (full deploy)
+//   • Manual build from Jenkins UI      → runs all 5 stages
+//
 // Stages:
-//   1. Checkout        – clone predictions repo
+//   1. Checkout        – clone predictions repo (source branch for open MR, main after merge)
 //   2. Test            – run pytest inside the python container
 //   3. Version         – determine next SemVer with git-cliff
 //   4. Build & Push    – build Docker image, tag :vX.Y.Z + :latest, push to Hub
+//                        (skipped for open MRs — only runs after merge)
 //   5. Update Infra    – bump image.tag in bet-infra/helm/bet/values.yaml
-//                        (ArgoCD auto-syncs from there)
+//                        (ArgoCD auto-syncs from there; skipped for open MRs)
 //
 // Required Jenkins credentials:
 //   dockerhub-creds   – Username/Password  (Docker Hub login)
@@ -138,14 +145,13 @@ spec:
         }
 
         // ── 4. Build & Push ───────────────────────────────────────────────────
-        // Only runs when triggered by an accepted (merged) MR or manually.
-        // Direct pushes to main do not trigger this pipeline.
+        // Skipped for open MRs (CI gate only). Runs when MR is merged or manual.
         stage('Build & Push') {
             when {
                 anyOf {
-                    // Triggered by GitLab accepted MR webhook
-                    environment name: 'gitlabActionType', value: 'MERGE'
-                    // Manual / fallback build from Jenkins UI
+                    // MR was accepted and merged into main
+                    environment name: 'gitlabMergeRequestState', value: 'merged'
+                    // Manual build from Jenkins UI (no GitLab context)
                     expression { env.gitlabActionType == null }
                 }
             }
@@ -179,7 +185,7 @@ spec:
         stage('Update Infra') {
             when {
                 anyOf {
-                    environment name: 'gitlabActionType', value: 'MERGE'
+                    environment name: 'gitlabMergeRequestState', value: 'merged'
                     expression { env.gitlabActionType == null }
                 }
             }
