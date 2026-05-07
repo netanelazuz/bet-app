@@ -1,6 +1,6 @@
 """Dashboard, Profile, Leaderboard, bet CRUD and Aura flows."""
 from datetime import datetime
-from flask import Blueprint, render_template, g, redirect, url_for, request, flash
+from flask import Blueprint, render_template, g, redirect, url_for, request, flash, jsonify
 from app import db
 from app.models import User, Bet, BetStatus, Difficulty, Participation
 from app.auth import login_required, get_current_user_id
@@ -288,3 +288,21 @@ def report_bet(bet_id):
         return redirect(url_for("main.dashboard"))
     flash(f"Bet reported ({bet.report_count}/5 reports).", "success")
     return redirect(url_for("main.bet_detail", bet_id=bet.id))
+
+
+@main_bp.route("/api/stats")
+def platform_stats():
+    """Public endpoint returning platform-wide prediction statistics."""
+    total_bets = Bet.query.count()
+    open_bets = Bet.query.filter_by(status=BetStatus.OPEN).count()
+    closed_bets = Bet.query.filter_by(status=BetStatus.CLOSED).count()
+    total_users = User.query.count()
+    total_participations = Participation.query.count()
+
+    return jsonify(
+        total_bets=total_bets,
+        open_bets=open_bets,
+        closed_bets=closed_bets,
+        total_users=total_users,
+        total_participations=total_participations,
+    )
