@@ -111,9 +111,11 @@ spec:
         // ── 3. Version ────────────────────────────────────────────────────────
         // git-cliff reads Conventional Commits and bumps the version.
         // If no tags exist yet it defaults to v0.1.0.
+        // python:3.12-slim has no git — install it before calling git-cliff.
         stage('Version') {
             steps {
                 container('python') {
+                    sh 'apt-get update -qq && apt-get install -y -qq git'
                     sh 'pip install --quiet git-cliff'
                     script {
                         def version = sh(
