@@ -1,13 +1,13 @@
 # ──────────────────────────────────────────────────────────────────────────────
-# BET – Workflow 1: CI + Build + Push + Refresh PR
+# BET – Workflow 1: CI + Build + Push + Open PR to main
 #
-# Trigger : PR opened or updated targeting main (from any branch, typically dev)
+# Trigger : PR opened or updated targeting dev (feature branch → dev)
 #
 # Steps:
 #   1. Test       – run pytest (fails fast, no image built on failure)
 #   2. Version    – determine next SemVer with git-cliff
 #   3. Build&Push – build Docker image, push :vX.Y.Z + :latest to Docker Hub
-#   4. Refresh PR – close any existing open PR dev→main, open a fresh one
+#   4. Open PR    – close any existing open PR dev→main, open a fresh one
 #                   with the current version and commit in the description
 #
 # Required secrets (set in GitHub repo Settings → Secrets → Actions):
@@ -20,14 +20,14 @@ name: CI — Build & Push
 on:
   pull_request:
     types: [opened, synchronize, reopened]
-    branches: [main]
+    branches: [dev]
 
 jobs:
   build:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      pull-requests: write   # needed to close + reopen PRs
+      pull-requests: write   # needed to create + close PRs
 
     steps:
 
@@ -83,44 +83,44 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      # ── 5. Refresh PR ────────────────────────────────────────────────────────
-      # Close every other open PR from the same head branch → main,
-      # then update the current PR's title and body with the new version.
-      - name: Refresh PR title & description
+      # ── 5. Open PR dev → main ────────────────────────────────────────────────
+      # Close any existing open PR dev→main, then open a fresh one
+      # with the new version so the user can review and merge to trigger deploy.
+      - name: Open PR to main
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           VERSION: ${{ steps.version.outputs.app_version }}
-          PR_NUMBER: ${{ github.event.pull_request.number }}
-          HEAD_BRANCH: ${{ github.head_ref }}
         run: |
           REPO="${{ github.repository }}"
 
-          # Close any OTHER open PRs from the same head branch targeting main
-          OTHER_PRS=$(gh pr list \
+          # Close any existing open PRs dev → main
+          EXISTING=$(gh pr list \
             --repo "$REPO" \
             --base main \
-            --head "$HEAD_BRANCH" \
+            --head dev \
             --state open \
             --json number \
-            --jq ".[] | select(.number != $PR_NUMBER) | .number")
+            --jq '.[].number')
 
-          for OLD_PR in $OTHER_PRS; do
-            echo "Closing stale PR #${OLD_PR}"
+          for OLD_PR in $EXISTING; do
+            echo "Closing old PR #${OLD_PR}"
             gh pr close "$OLD_PR" \
               --repo "$REPO" \
-              --comment "Superseded by PR #${PR_NUMBER} (version ${VERSION})"
+              --comment "Superseded by new build (version ${VERSION})"
           done
 
-          # Update current PR title + body with fresh version info
-          gh pr edit "$PR_NUMBER" \
+          # Open fresh PR dev → main
+          NEW_PR=$(gh pr create \
             --repo "$REPO" \
+            --base main \
+            --head dev \
             --title "chore(release): deploy ${VERSION}" \
             --body "## Automated release PR
 
 **Image:** \`netanelazuz/bet-app:${VERSION}\`
 **Commit:** \`${{ github.sha }}\`
-**Triggered by:** push to \`${HEAD_BRANCH}\` by @${{ github.actor }}
+**Triggered by:** PR from \`${{ github.head_ref }}\` by @${{ github.actor }}
 
-Merge this PR to trigger the deploy workflow → \`bet-infra\` updated → ArgoCD rolls out \`${VERSION}\`."
+Merge this PR to trigger the deploy workflow → \`bet-infra\` updated → ArgoCD rolls out \`${VERSION}\`.")
 
-          echo "PR #${PR_NUMBER} updated for version ${VERSION}"
+          echo "Opened PR: ${NEW_PR}"
