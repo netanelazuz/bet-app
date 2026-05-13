@@ -1,0 +1,86 @@
+# ──────────────────────────────────────────────────────────────────────────────
+# BET – Workflow 2: Deploy (Update Infra)
+#
+# Trigger : PR merged into main
+#
+# Steps:
+#   1. Version    – re-derive version from git-cliff (reads tag on main)
+#   2. Update Infra – clone bet-infra, bump image.tag in values.yaml, push
+#                     ArgoCD auto-syncs from there → rolling deploy
+#
+# Required secrets:
+#   INFRA_REPO_TOKEN  – GitHub PAT with 'repo' scope
+#                       (allows pushing to the separate bet-infra repository)
+# ──────────────────────────────────────────────────────────────────────────────
+
+name: Deploy — Update Infra
+
+on:
+  pull_request:
+    types: [closed]
+    branches: [main]
+
+jobs:
+  deploy:
+    # Only run when the PR was actually merged (not just closed/declined)
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+
+    steps:
+
+      # ── 1. Checkout main (full history + tags) ───────────────────────────────
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      # ── 2. Version ───────────────────────────────────────────────────────────
+      - name: Determine deployed version
+        id: version
+        run: |
+          pip install git-cliff
+          VERSION=$(git cliff --bumped-version 2>/dev/null || echo "v0.1.0")
+          [[ $VERSION != v* ]] && VERSION="v${VERSION}"
+          echo "app_version=${VERSION}" >> $GITHUB_OUTPUT
+          echo "Deploying version: ${VERSION}"
+
+      # ── 3. Update bet-infra ──────────────────────────────────────────────────
+      - name: Bump image tag in bet-infra
+        env:
+          INFRA_TOKEN: ${{ secrets.INFRA_REPO_TOKEN }}
+          VERSION: ${{ steps.version.outputs.app_version }}
+        run: |
+          git clone \
+            https://x-access-token:${INFRA_TOKEN}@github.com/netanelazuz/bet-infra.git \
+            /tmp/bet-infra
+          cd /tmp/bet-infra
+
+          pip install ruamel.yaml
+
+          python3 - << 'PYEOF'
+          import os
+          from ruamel.yaml import YAML
+
+          path    = 'helm/bet/values.yaml'
+          version = os.environ['VERSION']
+
+          yaml = YAML()
+          yaml.preserve_quotes = True
+          with open(path) as f:
+              data = yaml.load(f)
+
+          data['image']['tag'] = version
+          print(f'Updated image.tag → {version}')
+
+          with open(path, 'w') as f:
+              yaml.dump(data, f)
+          PYEOF
+
+          git config user.name  "GitHub Actions"
+          git config user.email "actions@github.com"
+          git add helm/bet/values.yaml
+          git commit -m "chore(release): bump image.tag to ${VERSION} [skip ci]"
+          git push
+
+          echo "bet-infra updated → ArgoCD will deploy ${VERSION}"
