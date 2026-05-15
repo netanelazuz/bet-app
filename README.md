@@ -1,5 +1,7 @@
 # BET – Private Social Prediction Platform (Application)
 
+###test###
+
 Flask application: JWT auth, PostgreSQL, Dashboard, Profile, Leaderboard.
 
 **Phase 2 (Aura):** Create bet, join with variable stake (yes/no), creator cannot join own bet; close bet (creator sets winning side); Aura redistribution (losing pool × difficulty multiplier); win/loss notification on dashboard; logout.

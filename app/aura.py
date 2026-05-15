@@ -3,7 +3,7 @@
 Reward formula (per characterization):
 - Total losing pool = sum(stake) of all losers.
 - Distributed proportionally among winners by their stake share.
-- Difficulty multiplier: Easy x0.5, Medium x1.0, Hard x1.5.
+- Difficulty multiplier: Easy x1.25, Medium x1.5, Hard x2.0.
 - Final reward per winner = (user_stake / total_winner_stake) * losing_pool * difficulty_mult.
 - No creator fee.
 """
@@ -11,9 +11,9 @@ from app.models import Bet, Difficulty, Participation, User
 
 
 DIFFICULTY_MULTIPLIER = {
-    Difficulty.EASY: 0.5,
-    Difficulty.MEDIUM: 1.0,
-    Difficulty.HARD: 1.5,
+    Difficulty.EASY: 1.25,
+    Difficulty.MEDIUM: 1.5,
+    Difficulty.HARD: 2.0,
 }
 
 
