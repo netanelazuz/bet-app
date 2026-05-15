@@ -20,6 +20,10 @@ on:
     types: [closed]
     branches: [main]
 
+permissions:
+  pull-requests: write
+  contents: write
+
 jobs:
   deploy:
     # Only run when the PR was actually merged (not just closed/declined)
