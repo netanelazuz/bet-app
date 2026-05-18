@@ -1,4 +1,5 @@
-"""BET application factory"""
+ test/ci-flow
+"""BET Application factory."""
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate

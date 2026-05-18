@@ -1,5 +1,6 @@
 # ──────────────────────────────────────────────────────────────────────────────
 # BET – Workflow 1: CI + Build + Push + Open PR to main
+# test: dummy change to re-trigger CI
 #
 # Trigger : PR opened or updated targeting dev (feature branch → dev)
 #
