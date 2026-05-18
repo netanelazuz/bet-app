@@ -1,4 +1,3 @@
- test/ci-flow
 """BET Application factory."""
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
