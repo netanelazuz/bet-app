@@ -115,17 +115,24 @@ jobs:
           done
 
           # Open fresh PR dev → main
+          BODY=$(cat <<'BODYEOF'
+## Automated release PR
+
+**Image:** `netanelazuz/bet-app:${VERSION}`
+**Commit:** `${{ github.sha }}`
+**Triggered by:** PR from `${{ github.head_ref }}` by @${{ github.actor }}
+
+Merge this PR to trigger the deploy workflow → `bet-infra` updated → ArgoCD rolls out `${VERSION}`.
+BODYEOF
+)
+          # Expand shell variables in the body
+          BODY=$(eval "echo \"$BODY\"")
+
           NEW_PR=$(gh pr create \
             --repo "$REPO" \
             --base main \
             --head dev \
             --title "chore(release): deploy ${VERSION}" \
-            --body "## Automated release PR
-
-**Image:** \`netanelazuz/bet-app:${VERSION}\`
-**Commit:** \`${{ github.sha }}\`
-**Triggered by:** PR from \`${{ github.head_ref }}\` by @${{ github.actor }}
-
-Merge this PR to trigger the deploy workflow → \`bet-infra\` updated → ArgoCD rolls out \`${VERSION}\`.")
+            --body "$BODY")
 
           echo "Opened PR: ${NEW_PR}"
