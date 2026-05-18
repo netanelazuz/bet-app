@@ -120,8 +120,8 @@ def test_aura_redistribution(client, init_db):
         db.session.commit()
         bob = db.session.get(User, bob.id)
         charlie = db.session.get(User, charlie.id)
-        # Winner Bob: stake 40, gets stake back + (40/40)*60*1 = 40+60 = 100. aura 60+100 = 160.
-        assert bob.aura == 160
+        # Winner Bob: stake 40, gets stake back + (40/40)*60*1.5 = 40+90 = 130. aura 60+130 = 190.
+        assert bob.aura == 190
         assert bob.wins == 1
         assert charlie.losses == 1
         assert charlie.aura == 40  # unchanged (already deducted when joined)
